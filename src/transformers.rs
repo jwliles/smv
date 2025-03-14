@@ -1,6 +1,5 @@
-use regex::Regex;
-use std::error::Error;
 use once_cell::sync::Lazy;
+use regex::Regex;
 
 /// Transformation types available for filename conversion
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -49,9 +48,12 @@ impl TransformType {
 // Regular expressions used for transformations
 static SPECIAL_CHARS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^\w\s.-]").unwrap());
 static MULTIPLE_SPACES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
-static LEADING_TRAILING_SPECIALS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[-\s.]+|[-\s.]+$").unwrap());
-static UPPERCASE_FOLLOWED_BY_LOWERCASE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"([A-Z]+)([A-Z][a-z])").unwrap());
-static LOWERCASE_FOLLOWED_BY_UPPERCASE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"([a-z\d])([A-Z])").unwrap());
+static LEADING_TRAILING_SPECIALS_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[-\s.]+|[-\s.]+$").unwrap());
+static UPPERCASE_FOLLOWED_BY_LOWERCASE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"([A-Z]+)([A-Z][a-z])").unwrap());
+static LOWERCASE_FOLLOWED_BY_UPPERCASE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"([a-z\d])([A-Z])").unwrap());
 static WORD_SEPARATORS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s_-]+").unwrap());
 
 /// Transform a filename according to the specified transformation type
@@ -73,14 +75,17 @@ fn clean(name: &str) -> String {
     let trimmed = name.trim();
     let normalized_spaces = MULTIPLE_SPACES_RE.replace_all(trimmed, " ");
     let no_special_chars = SPECIAL_CHARS_RE.replace_all(&normalized_spaces, "");
-    LEADING_TRAILING_SPECIALS_RE.replace_all(&no_special_chars, "").to_string()
+    LEADING_TRAILING_SPECIALS_RE
+        .replace_all(&no_special_chars, "")
+        .to_string()
 }
 
 /// Convert a filename to snake_case
 fn snake_case(name: &str) -> String {
     let with_slashes = name.replace("::", "/");
     let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1_$2");
-    let second_transform = LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1_$2");
+    let second_transform =
+        LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1_$2");
     second_transform.replace('-', "_").to_lowercase()
 }
 
@@ -88,7 +93,8 @@ fn snake_case(name: &str) -> String {
 fn kebab_case(name: &str) -> String {
     let with_slashes = name.replace("::", "/");
     let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1-$2");
-    let second_transform = LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1-$2");
+    let second_transform =
+        LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1-$2");
     second_transform.replace('_', "-").to_lowercase()
 }
 
@@ -108,16 +114,16 @@ fn camel_case(name: &str) -> String {
         .split(name)
         .filter(|s| !s.is_empty())
         .collect::<Vec<&str>>();
-    
+
     if words.is_empty() {
         return String::new();
     }
-    
+
     let mut result = words[0].to_lowercase();
     for word in words.iter().skip(1) {
         result.push_str(&capitalize_first(word));
     }
-    
+
     result
 }
 

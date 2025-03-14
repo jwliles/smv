@@ -6,12 +6,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::error::Error;
-use std::env;
 
 use clap::{Parser, ArgAction};
 use colored::*;
 use regex::Regex;
-use deunicode::deunicode;
 use walkdir::WalkDir;
 use dirs::home_dir;
 
@@ -193,7 +191,7 @@ fn run_transformation_mode(args: &Args) -> Result<(), Box<dyn Error>> {
     };
 
     // Process exclude patterns
-    let exclude_patterns: Vec<Regex> = process_exclude_patterns(args.exclude.as_deref())?;
+    let exclude_patterns = process_exclude_patterns(args.exclude.as_deref())?;
 
     // Process file extensions
     let extensions: Option<Vec<String>> = args.extensions.as_ref().map(|exts| {
@@ -312,27 +310,26 @@ fn run_standard_mv_mode(args: &Args) -> Result<(), Box<dyn Error>> {
 /// Process exclude patterns into Regex objects
 fn process_exclude_patterns(patterns: Option<&str>) -> Result<Vec<Regex>, Box<dyn Error>> {
     match patterns {
-        Some(patterns) => patterns
-            .split(',')
-            .filter_map(|p| {
+        Some(patterns) => {
+            let mut result = Vec::new();
+            for p in patterns.split(',') {
                 let p = p.trim();
-                if p.is_empty() {
-                    None
-                } else {
+                if !p.is_empty() {
                     match Regex::new(p) {
-                        Ok(re) => Some(re),
+                        Ok(re) => result.push(re),
                         Err(e) => {
                             eprintln!("{}: {}", "Invalid regex pattern".red(), e);
-                            None
                         }
                     }
                 }
-            })
-            .collect(),
+            }
+            Ok(result)
+        },
         None => Ok(Vec::new()),
     }
 }
 
+/// Process a single glob pattern for transformation
 /// Process a single glob pattern for transformation
 fn process_pattern(
     pattern: &str,
@@ -353,42 +350,80 @@ fn process_pattern(
             .unwrap_or_else(|| PathBuf::from("."))
     };
 
-    // Use WalkDir for recursive traversal or just the directory entries
-    let entries = if recursive {
-        WalkDir::new(&base_dir).into_iter().filter_map(Result::ok).collect::<Vec<_>>()
+    // Process files based on whether we're doing recursive traversal or not
+    if recursive {
+        // Use WalkDir for recursive traversal
+        for entry in WalkDir::new(&base_dir) {
+            match entry {
+                Ok(entry) => {
+                    let path = entry.path();
+                    
+                    // Skip directories
+                    if path.is_dir() {
+                        continue;
+                    }
+                    
+                    // Check if path matches the pattern
+                    if !path_matches_pattern(path, pattern) {
+                        continue;
+                    }
+                    
+                    // Process the file
+                    process_file(
+                        path, 
+                        transform_type, 
+                        preview_only, 
+                        exclude_patterns, 
+                        extensions, 
+                        stats
+                    )?;
+                },
+                Err(e) => {
+                    eprintln!("Error reading directory entry: {}", e);
+                    stats.errors += 1;
+                }
+            }
+        }
     } else {
-        fs::read_dir(&base_dir)
-            .map_err(|e| format!("Failed to read directory {}: {}", base_dir.display(), e))?
-            .filter_map(Result::ok)
-            .map(|e| e.path())
-            .filter(|p| p.is_file())
-            .map(|p| walkdir::DirEntry::from_path(p).ok())
-            .filter_map(|e| e)
-            .collect::<Vec<_>>()
-    };
-
-    for entry in entries {
-        let path = entry.path();
-        
-        // Skip directories
-        if path.is_dir() {
-            continue;
+        // Just process the current directory
+        match fs::read_dir(&base_dir) {
+            Ok(dir_entries) => {
+                for entry in dir_entries {
+                    match entry {
+                        Ok(entry) => {
+                            let path = entry.path();
+                            
+                            // Skip directories
+                            if path.is_dir() {
+                                continue;
+                            }
+                            
+                            // Check if path matches the pattern
+                            if !path_matches_pattern(&path, pattern) {
+                                continue;
+                            }
+                            
+                            // Process the file
+                            process_file(
+                                &path, 
+                                transform_type, 
+                                preview_only, 
+                                exclude_patterns, 
+                                extensions, 
+                                stats
+                            )?;
+                        },
+                        Err(e) => {
+                            eprintln!("Error reading directory entry: {}", e);
+                            stats.errors += 1;
+                        }
+                    }
+                }
+            },
+            Err(e) => {
+                return Err(format!("Failed to read directory {}: {}", base_dir.display(), e).into());
+            }
         }
-        
-        // Check if path matches the pattern
-        if !path_matches_pattern(path, pattern) {
-            continue;
-        }
-        
-        // Process the file
-        process_file(
-            path, 
-            transform_type, 
-            preview_only, 
-            exclude_patterns, 
-            extensions, 
-            stats
-        )?;
     }
 
     Ok(())
@@ -474,7 +509,7 @@ fn process_file(
     let new_path = directory.join(&new_name);
 
     // Check if the new name would conflict with an existing file
-    if new_path.exists() && file_path != new_path {
+    if new_path.exists() && file_path != &new_path {
         println!("{}: Cannot rename \"{}\" to \"{}\" - file already exists", 
             "Error".red(), file_path_str, new_path.to_string_lossy());
         stats.errors += 1;
