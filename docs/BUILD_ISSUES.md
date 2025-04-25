@@ -20,24 +20,26 @@ The issue arises despite the following conditions:
 ### Root Cause Analysis
 
 This problem appears to be related to an unusual interaction between:
-1. The specific Rust toolchain installation
+1. The use of Rust 2024 edition with older Rust toolchains
 2. The proc-macro compilation process
 3. Potentially the host environment configuration
 
-The exact cause remains unclear, as this issue doesn't match common known problems with proc-macro compilation. It may be due to:
-- Corrupted Rust toolchain installation
-- Missing system dependencies required for proc-macro compilation
-- Environment variables or OS-specific limitations
-- Unusual interaction between crate versions
+The project was originally developed with Rust 2024 edition (released in February 2025). When attempting to build with Rust 1.65.0 or even newer versions that don't fully support all 2024 edition features, proc-macro compilation fails.
+
+The exact cause involves:
+- Edition incompatibility: Rust 2024 edition features being used in proc-macro code
+- Toolchain limitations: Older Rust toolchains not supporting newer proc-macro features
+- Target constraints: The `x86_64-unknown-linux-gnu` target potentially having limitations with proc-macros on certain toolchain versions
 
 ### Workaround Implemented
 
 To work around this issue, we've modified the project to:
-1. Switch from clap's derive-based API to its builder-based API
-2. Keep using the nightly Rust toolchain
-3. Maintain the same functionality while avoiding proc-macro dependencies
+1. Restore the Rust 2024 edition in Cargo.toml (the original edition)
+2. Switch from clap's derive-based API to its builder-based API
+3. Keep using the nightly Rust toolchain
+4. Maintain the same functionality while avoiding proc-macro dependencies
 
-This approach eliminates the need for procedural macros during compilation while preserving all the command-line argument parsing capabilities.
+This approach provides compatibility with the 2024 edition features while circumventing the proc-macro compilation issues. It eliminates the need for procedural macros during compilation while preserving all the command-line argument parsing capabilities.
 
 ### Alternative Approaches (Not Implemented)
 
