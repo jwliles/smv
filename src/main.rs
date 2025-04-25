@@ -6,12 +6,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::error::Error;
-use std::env;
 
 use clap::{Parser, ArgAction};
 use colored::*;
 use regex::Regex;
-use deunicode::deunicode;
 use walkdir::WalkDir;
 use dirs::home_dir;
 
@@ -312,23 +310,26 @@ fn run_standard_mv_mode(args: &Args) -> Result<(), Box<dyn Error>> {
 /// Process exclude patterns into Regex objects
 fn process_exclude_patterns(patterns: Option<&str>) -> Result<Vec<Regex>, Box<dyn Error>> {
     match patterns {
-        Some(patterns) => patterns
-            .split(',')
-            .filter_map(|p| {
-                let p = p.trim();
-                if p.is_empty() {
-                    None
-                } else {
-                    match Regex::new(p) {
-                        Ok(re) => Some(re),
-                        Err(e) => {
-                            eprintln!("{}: {}", "Invalid regex pattern".red(), e);
-                            None
+        Some(patterns) => {
+            let result: Vec<Regex> = patterns
+                .split(',')
+                .filter_map(|p| {
+                    let p = p.trim();
+                    if p.is_empty() {
+                        None
+                    } else {
+                        match Regex::new(p) {
+                            Ok(re) => Some(re),
+                            Err(e) => {
+                                eprintln!("{}: {}", "Invalid regex pattern".red(), e);
+                                None
+                            }
                         }
                     }
-                }
-            })
-            .collect(),
+                })
+                .collect();
+            Ok(result)
+        },
         None => Ok(Vec::new()),
     }
 }
@@ -357,13 +358,22 @@ fn process_pattern(
     let entries = if recursive {
         WalkDir::new(&base_dir).into_iter().filter_map(Result::ok).collect::<Vec<_>>()
     } else {
-        fs::read_dir(&base_dir)
+        let paths = fs::read_dir(&base_dir)
             .map_err(|e| format!("Failed to read directory {}: {}", base_dir.display(), e))?
             .filter_map(Result::ok)
             .map(|e| e.path())
             .filter(|p| p.is_file())
-            .map(|p| walkdir::DirEntry::from_path(p).ok())
-            .filter_map(|e| e)
+            .collect::<Vec<_>>();
+
+        // Convert paths to WalkDir entries
+        paths.into_iter()
+            .filter_map(|path| {
+                WalkDir::new(&path)
+                    .max_depth(0)
+                    .into_iter()
+                    .next()
+                    .and_then(|e| e.ok())
+            })
             .collect::<Vec<_>>()
     };
 

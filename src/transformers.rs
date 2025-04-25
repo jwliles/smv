@@ -1,5 +1,4 @@
 use regex::Regex;
-use std::error::Error;
 use once_cell::sync::Lazy;
 
 /// Transformation types available for filename conversion

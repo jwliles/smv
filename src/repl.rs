@@ -5,12 +5,14 @@ use std::io::{self, Write};
 use std::process;
 
 use colored::*;
-use rustyline::{Editor, Result as RustylineResult};
+use rustyline::{Editor, Result as RustylineResult, CompletionType, Config};
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
 use rustyline::validate::Validator;
+use rustyline::Helper;
+use rustyline::history::DefaultHistory;
 use glob::glob;
 
 use crate::transformers::{TransformType, transform};
@@ -92,20 +94,26 @@ impl Hinter for CommandCompleter {
 
 impl Highlighter for CommandCompleter {}
 impl Validator for CommandCompleter {}
+impl Helper for CommandCompleter {}
 
 /// Interactive REPL for SMV
 pub struct InteractiveSession {
-    editor: Editor<CommandCompleter>,
+    editor: Editor<CommandCompleter, DefaultHistory>,
     history_manager: HistoryManager,
     current_dir: PathBuf,
 }
 
 impl InteractiveSession {
     pub fn new(max_history_size: usize, backup_dir: &Path) -> Result<Self, Box<dyn Error>> {
-        // Create a rustyline editor with custom completer
-        let completer = CommandCompleter::new();
-        let mut editor = Editor::new()?;
-        editor.set_completer(Some(completer));
+        // Create a rustyline editor with custom configuration
+        let config = Config::builder()
+            .completion_type(CompletionType::List)
+            .build();
+        let mut editor = Editor::with_config(config)?;
+        
+        // Set the helper for completion
+        let helper = CommandCompleter::new();
+        editor.set_helper(Some(helper));
         
         // Set the current directory
         let current_dir = env::current_dir()?;
@@ -137,7 +145,7 @@ impl InteractiveSession {
                     }
                     
                     // Add to history
-                    self.editor.add_history_entry(line);
+                    let _ = self.editor.add_history_entry(line);
                     
                     // Process the command
                     if let Err(e) = self.execute_command(line) {
