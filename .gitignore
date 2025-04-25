@@ -1,6 +1,7 @@
 # Rust build directory and files
 /target/
 **/*.rs.bk
+# Keep Cargo.lock for binary crates
 # Cargo.lock
 
 # VSCode
@@ -87,3 +88,9 @@ coverage/
 
 # Generated test files
 /tests/generated/
+
+# Archive directory
+.archive/
+
+# Context for AI tools
+context/
