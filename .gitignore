@@ -57,6 +57,9 @@ Session.vim
 /build/
 *.pdb
 
+# Development files
+# BUGS.md file is now tracked
+
 # Environment files
 .env
 .env.local
