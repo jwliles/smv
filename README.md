@@ -31,7 +31,7 @@ cargo install smv
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/smv.git
+git clone https://github.com/jwliles/smv.git
 cd smv
 
 # Build and install
@@ -53,6 +53,8 @@ smv file1.txt file2.txt destination_directory/
 
 # Rename a file
 smv old_name.txt new_name.txt
+
+```
 
 ### Transformation Mode
 
@@ -179,19 +181,38 @@ SMV will not overwrite existing files unless explicitly instructed to do so, pre
 
 ## Requirements
 
-- Rust (Minimum supported version: 1.65)
+- Rust (Minimum supported version: 1.85.0)
 - Standard system libraries
 
 ## Roadmap
 
-- [ ] Multi-step transformation pipelines
-- [ ] Regular expression-based transformations
-- [ ] Custom user-defined transformations
-- [ ] Configuration file system
-- [ ] Directory synchronization features
-- [ ] Plugin system for add-ons
-- [ ] Enhanced REPL with syntax highlighting
-- [ ] Color-coded preview output
+- [ ] **Multi-step transformation pipelines**: Chain multiple transforms together
+  ```bash
+  # Example: Clean, convert to snake_case, then replace spaces with underscores
+  smv --transform "clean,snake,replace:space:_" file.txt
+  ```
+
+- [ ] **Regular expression-based transformations**: Advanced pattern replacement
+  ```bash
+  # Example: Replace "old" with "new" in filenames
+  smv --replace "old:new" file.txt
+  # Example: Replace all digits with 'X'
+  smv --character-replace "digits:X" file*.txt
+  ```
+
+- [ ] **Custom user-defined transformations**: Save your own transform combinations
+  ```bash
+  # Example: Save a custom transformation
+  smv --save "my-format:clean,snake,upper"
+  # Use the custom transformation
+  smv --transform my-format file.txt
+  ```
+
+- [ ] **Configuration file system**: Persistent settings and defaults
+- [ ] **Directory synchronization features**: Keep renamed files in sync
+- [ ] **Plugin system for add-ons**: Extend functionality
+- [ ] **Enhanced REPL with syntax highlighting**: Improved interactive mode
+- [ ] **Color-coded preview output**: Visual differentiation of changes
 
 ## License
 
