@@ -1,12 +1,12 @@
 [package]
 name = "smv"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Justin Wayne Liles <jwliles@outlook.com>"]
 description = "Smart Move - An enhanced mv command with transformation capabilities"
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/yourusername/smv"
+repository = "https://github.com/jwliles/smv"
 keywords = ["cli", "files", "rename", "mv", "utility"]
 categories = ["command-line-utilities", "filesystem"]
 
