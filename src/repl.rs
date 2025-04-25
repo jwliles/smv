@@ -626,4 +626,5 @@ impl InteractiveSession {
         
         println!("\nRenaming complete!");
         Ok(())
-        
+    }
+}
