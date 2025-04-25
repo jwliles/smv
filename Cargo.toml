@@ -1,6 +1,6 @@
 [package]
 name = "smv"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Justin Wayne Liles <jwliles@outlook.com>"]
 description = "Smart Move - An enhanced mv command with transformation capabilities"
