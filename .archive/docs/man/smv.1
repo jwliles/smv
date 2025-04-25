@@ -1,0 +1,197 @@
+.TH SMV 1 "April 2025" "SMV 0.1.0" "User Commands"
+.SH NAME
+smv \- Smart Move: enhanced file moving and renaming utility
+.SH SYNOPSIS
+.B smv
+[\fIOPTIONS\fR]
+[\fISOURCE\fR...]
+[\fIDESTINATION\fR]
+.SH DESCRIPTION
+.B smv
+is an enhanced version of the standard \fBmv\fR command with powerful file renaming capabilities,
+transformation options, preview mode, and undo functionality.
+.PP
+It can be used as a direct replacement for \fBmv\fR for simple file moving operations,
+or with additional options to perform batch renaming and transformation of filenames.
+.SH OPTIONS
+.SS Core Options
+.TP
+.BR \-i ", " \-\-interactive
+Interactive mode - launch REPL interface
+.TP
+.BR \-p ", " \-\-preview
+Preview changes without applying them
+.TP
+.BR \-r ", " \-\-recursive
+Process subdirectories recursively
+.TP
+.BR \-e ", " \-\-extensions=\fIEXTS\fR
+Comma-separated list of file extensions to process
+.TP
+.BR \-a ", " \-\-remove\-accents
+Remove accents
+.TP
+.BR \-\-dry\-run
+Same as preview - show what would change without making changes
+.TP
+.BR \-\-exclude=\fIPATTERNS\fR
+Comma-separated patterns to exclude
+.TP
+.BR \-\-max\-history\-size=\fISIZE\fR
+Maximum number of operations to keep in history (default: 50)
+.TP
+.BR \-h ", " \-\-help
+Print help information
+.TP
+.BR \-V ", " \-\-version
+Print version information
+.SS Transformation Options
+.TP
+.BR \-\-clean
+Convert to clean format (remove special chars, normalize spaces)
+.TP
+.BR \-\-snake
+Convert to snake_case
+.TP
+.BR \-\-kebab
+Convert to kebab-case
+.TP
+.BR \-\-title
+Convert to Title Case
+.TP
+.BR \-\-camel
+Convert to camelCase
+.TP
+.BR \-\-pascal
+Convert to PascalCase
+.TP
+.BR \-\-lower
+Convert to lowercase
+.TP
+.BR \-\-upper
+Convert to UPPERCASE
+.SH EXAMPLES
+.TP
+.B Standard move operation:
+.nf
+smv source.txt destination.txt
+smv file1.txt file2.txt directory/
+.fi
+.TP
+.B Preview a transformation:
+.nf
+smv --snake --preview *.txt
+.fi
+.TP
+.B Convert filenames to kebab-case:
+.nf
+smv --kebab *.png
+.fi
+.TP
+.B Clean up filenames:
+.nf
+smv --clean "My File*.txt"
+.fi
+.TP
+.B Convert to PascalCase recursively:
+.nf
+smv --pascal --recursive src/*.rs
+.fi
+.TP
+.B Filter by extension:
+.nf
+smv --clean --extensions jpg,png images/
+.fi
+.TP
+.B Exclude files matching a pattern:
+.nf
+smv --snake --exclude "backup" *.txt
+.fi
+.TP
+.B Launch interactive mode:
+.nf
+smv -i
+.fi
+.SH INTERACTIVE MODE
+When launched with \fB-i\fR or \fB--interactive\fR, SMV enters an interactive REPL mode with the following commands:
+.TP
+.B preview <transform> <files>
+Show transformation without applying
+.TP
+.B apply <transform> <files>
+Apply transformation
+.TP
+.B rename <files> --options
+Interactive renaming wizard
+.TP
+.B undo
+Revert last operation
+.TP
+.B cd <directory>
+Change directory
+.TP
+.B ls [pattern]
+List files
+.TP
+.B help
+Show help information
+.TP
+.B quit
+Exit program
+.SH TRANSFORMATIONS
+.TP
+.B clean
+Clean up spaces and special characters
+.br
+Example: "My File (1).txt" → "My File 1.txt"
+.TP
+.B snake
+Convert to snake_case
+.br
+Example: "My-File.txt" → "my_file.txt"
+.TP
+.B kebab
+Convert to kebab-case
+.br
+Example: "My_File.txt" → "my-file.txt"
+.TP
+.B title
+Convert to Title Case
+.br
+Example: "my_file.txt" → "My File.txt"
+.TP
+.B camel
+Convert to camelCase
+.br
+Example: "my_file.txt" → "myFile.txt"
+.TP
+.B pascal
+Convert to PascalCase
+.br
+Example: "my_file.txt" → "MyFile.txt"
+.TP
+.B lower
+Convert to lowercase
+.br
+Example: "MyFile.txt" → "myfile.txt"
+.TP
+.B upper
+Convert to UPPERCASE
+.br
+Example: "myFile.txt" → "MYFILE.TXT"
+.SH FILES
+.TP
+.B ~/.config/smv/backups/
+Directory where file backups are stored
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+Failure
+.SH AUTHOR
+Justin Wayne Liles <jwliles@outlook.com>
+.SH SEE ALSO
+.BR mv (1),
+.BR rename (1)

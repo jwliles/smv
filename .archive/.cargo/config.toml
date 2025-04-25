@@ -1,0 +1,7 @@
+[build]
+# Ensure compatibility with Rust 1.65.0
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[net]
+# Retry downloads more times
+retry = 10

@@ -89,8 +89,8 @@ coverage/
 # Generated test files
 /tests/generated/
 
-# Archive directory
-.archive/
+# We are keeping the archive directory in git
+# .archive/
 
 # Context for AI tools
 context/

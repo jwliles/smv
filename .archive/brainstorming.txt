@@ -1,0 +1,182 @@
+*smv-features.txt*  Smart Move (smv) Feature Brainstorming
+
+==============================================================================
+CONTENTS                                                 *smv-features-contents*
+
+    1. Already Implemented Features ................. |smv-implemented|
+    2. Planned Features (In README) ................. |smv-planned|
+    3. New Proposed Features ........................ |smv-proposed|
+    4. Today's Ideas & Refinements .................. |smv-today|
+    5. Implementation Prioritization ................ |smv-priorities|
+
+==============================================================================
+1. ALREADY IMPLEMENTED FEATURES                              *smv-implemented*
+
+Core Functionality:~
+    • Standard mv functionality: Move files like standard `mv` command
+    • Preview mode: See changes before applying them
+    • Undo capability: Revert the last operation
+    • Interactive REPL: User-friendly interactive mode
+
+File Selection and Filtering:~
+    • Flexible file selection: Support for glob patterns
+    • Recursive operation: Apply changes to subdirectories
+    • File filtering: Filter by extension or exclude patterns 
+
+File Transformations:~
+    • clean       Remove special characters and normalize spaces
+    • snake_case  Convert to snake_case format
+    • kebab-case  Convert to kebab-case format
+    • Title Case  Convert to Title Case format
+    • camelCase   Convert to camelCase format
+    • PascalCase  Convert to PascalCase format
+    • lowercase   Convert to lowercase
+    • UPPERCASE   Convert to UPPERCASE
+
+Safety and User Experience:~
+    • History management: Track and manage file operations
+    • File backups: Automatic backups before operations
+    • Conflict detection: Prevent accidental overwriting
+    • Colored output: Clear and colorful command line interface
+
+==============================================================================
+2. PLANNED FEATURES (ALREADY IN README)                         *smv-planned*
+
+    • Multi-step transformation pipelines
+    • Regular expression-based transformations
+    • Custom user-defined transformations
+    • Configuration file system
+    • Directory synchronization features
+    • Plugin system for add-ons
+    • Enhanced REPL with tab completion
+    • Color-coded preview output
+    • Batch operations with regex pattern matching
+    • Integration with version control systems
+
+==============================================================================
+3. NEW PROPOSED FEATURES                                        *smv-proposed*
+
+Character and Pattern Manipulation~
+    Advanced character replacement:
+    • Replace specific characters or substrings within filenames
+    • Find and replace: Replace specific substrings (e.g., "fil" → "")
+    • Pattern-based replacement: Replace conditionally (e.g., only at start)
+    • Character class operations: Replace digits, vowels, consonants, etc.
+
+Flexible Pattern Matching~
+    • Wildcard matching beyond basic glob patterns
+    • Simplified regex-like syntax for non-technical users
+    • Character classes: Target specific types of characters
+
+Transformation Pipeline Enhancements~
+    • Sequential transformations with clear visualization
+    • Save and load transformation sequences
+    • Named transformation templates for reuse
+
+Interactive Features~
+    • Real-time preview as transformations are defined
+    • Step-by-step application of transformations
+    • Visual display of intermediate results
+
+Smart Formatting~
+    • Date format conversion (e.g., YYYYMMDD → YYYY-MM-DD)
+    • Version number standardization
+    • Smart numbering for sequential files (01, 02, 03...)
+    • Automatic handling of filename collisions with intelligent strategies
+
+Conditional Rules~
+    • If-then-else conditions for transformations
+    • Apply transforms only when filenames meet specific criteria
+    • Different rules for different file types
+
+User Experience Improvements~
+    • Enhanced tab completion with context awareness
+    • History browsing of previous transformations
+    • Undo specific steps within a transformation sequence
+    • Dry run with detailed explanation of each change
+
+Integration Capabilities~
+    • Git-aware operations: Skip files in .gitignore
+    • Directory synchronization: Mirror rename operations across directories
+    • Backup integration: Automatic backups before batch operations
+    • Cloud service hooks: Rename local files and update cloud references
+
+Advanced Batch Operations~
+    • Batch rename with numbering
+    • Sort and rename based on metadata (creation date, size, etc.)
+    • Extract metadata from files for naming (e.g., EXIF data)
+    • Apply transformations based on file content patterns
+
+==============================================================================
+4. TODAY'S IDEAS & REFINEMENTS                                    *smv-today*
+
+Transform Pipelines~
+    • Command-line pipeline syntax for chaining transformations:
+      >
+          smv --pipeline "clean,snake,replace:old:new" file.txt
+      <
+    • Pipeline visualization showing each step's effect
+    • Save and load common pipeline sequences with custom names
+
+User-Defined Custom Transformations~
+    • Create custom transformation functions:
+      >
+          smv --save-transform "my-format:clean,replace:space:_,upper" 
+          smv --transform my-format file.txt
+      <
+    • Configuration file to store and manage custom transformations
+    • Ability to share transformations with other users
+
+Templating System~
+    • Predefined templates for common use cases:
+      >
+          smv --template "podcast-episode" *.mp3
+      <
+    • Context-aware templates (different for images vs. documents)
+    • Template variables (e.g., ${index}, ${date}, ${parent_dir})
+
+Enhanced Character Replacement~
+    • Character set transformations:
+      >
+          smv --replace-chars "digits:X" file*.txt
+          smv --replace-chars "vowels:#" file*.txt
+      <
+    • Position-based replacements (beginning, end, position N)
+    • Contextual replacements (only when surrounded by specific characters)
+
+Conditional Transformations~
+    • Rule-based transforms with simple syntax:
+      >
+          smv --rule "if:contains:draft:then:prefix:DRAFT-" *.txt
+      <
+    • Multiple conditions and actions with Boolean operators
+    • File property conditions (size, date, permissions)
+
+Structured Data Handling~
+    • Smart date format conversion:
+      >
+          smv --date-format "YYYYMMDD:YYYY-MM-DD" *
+      <
+    • Extract and reformat version numbers
+    • Handle structured data within filenames (ISBN numbers, coordinates)
+
+REPL Enhancements~
+    • Improved tab completion with context awareness
+    • Live preview of transformations as commands are typed
+    • Visual history browser with ability to reapply previous commands
+
+==============================================================================
+5. IMPLEMENTATION PRIORITIZATION                              *smv-priorities*
+
+Priority Order:~
+    1. Transform pipelines (builds on existing architecture)
+    2. Enhanced character replacement (most requested feature)
+    3. Custom transformations (user empowerment)
+    4. Templating system (productivity boost)
+    5. Conditional transformations (advanced flexibility)
+
+Architecture Considerations:~
+    • Plugin system to allow modular feature addition
+    • Consistent API for all transformation types
+    • Separation of transformation logic from UI/CLI
+    • Flexible serialization format for saving/sharing transformations
