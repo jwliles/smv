@@ -2,10 +2,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::error::Error;
 use chrono::{DateTime, Local};
-use serde::{Serialize, Deserialize};
 
 /// Represents a single file operation that can be undone
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Operation {
     pub source: PathBuf,
     pub destination: PathBuf,
