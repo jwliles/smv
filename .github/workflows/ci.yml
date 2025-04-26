@@ -72,12 +72,9 @@ jobs:
           command: clippy
           args: --all-features -- -D warnings
 
-  cross-platform:
-    name: Cross-Platform Tests
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  free-platform:
+    name: Free Platform Test
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1

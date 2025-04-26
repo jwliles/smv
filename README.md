@@ -202,7 +202,10 @@ SMV will not overwrite existing files unless explicitly instructed to do so, pre
 ## Requirements
 
 - Rust (Minimum supported version: 1.85.0)
+- GNU/Linux or other free operating system
 - Standard system libraries
+
+**Note**: SMV is developed exclusively for free operating systems. It is not officially tested or supported on proprietary platforms.
 
 ## Development
 
