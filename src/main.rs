@@ -1,26 +1,26 @@
-mod transformers;
 mod history;
 mod repl;
+mod transformers;
 
+use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
-use std::error::Error;
 
-use clap::{Parser, ArgAction};
+use clap::{ArgAction, Parser};
 use colored::*;
+use dirs::home_dir;
 use regex::Regex;
 use walkdir::WalkDir;
-use dirs::home_dir;
 
-use transformers::{TransformType, transform};
 use history::HistoryManager;
 use repl::InteractiveSession;
+use transformers::{transform, TransformType};
 
 #[derive(Parser, Debug)]
 #[command(
-    author, 
-    version, 
+    author,
+    version,
     about = "Smart Move - An enhanced mv command with transformation capabilities",
     long_about = None
 )]
@@ -145,21 +145,27 @@ fn run_interactive_mode(max_history_size: usize) -> Result<(), Box<dyn Error>> {
         .join(".config")
         .join("smv")
         .join("backups");
-    
+
     // Ensure backup directory exists
     fs::create_dir_all(&backup_dir)?;
-    
+
     // Create and run interactive session
     let mut session = InteractiveSession::new(max_history_size, &backup_dir)?;
     session.run()?;
-    
+
     Ok(())
 }
 
 /// Check if any transformation options are enabled
 fn is_transformation_requested(args: &Args) -> bool {
-    args.clean || args.snake || args.kebab || args.title || 
-    args.camel || args.pascal || args.lower || args.upper
+    args.clean
+        || args.snake
+        || args.kebab
+        || args.title
+        || args.camel
+        || args.pascal
+        || args.lower
+        || args.upper
 }
 
 /// Run in transformation mode - rename files according to specified transformation
@@ -202,33 +208,50 @@ fn run_transformation_mode(args: &Args) -> Result<(), Box<dyn Error>> {
     });
 
     // Print operation mode
-    println!("\n{}\n", format!(
-        "Smart Move - {} Mode", 
-        if args.preview { "Preview" } else { "Rename" }).bold()
+    println!(
+        "\n{}\n",
+        format!(
+            "Smart Move - {} Mode",
+            if args.preview { "Preview" } else { "Rename" }
+        )
+        .bold()
     );
     println!("Transformation: {}", transform_type.as_str().green());
-    println!("Recursive: {}", if args.recursive { "Yes".green() } else { "No".yellow() });
-    println!("Extensions filter: {}", match &extensions {
-        Some(exts) if !exts.is_empty() => exts.join(", ").cyan(),
-        _ => "None (all files)".yellow(),
-    });
-    println!("Exclude patterns: {}\n", if !exclude_patterns.is_empty() {
-        args.exclude.as_deref().unwrap_or_default().cyan()
-    } else {
-        "None".yellow()
-    });
+    println!(
+        "Recursive: {}",
+        if args.recursive {
+            "Yes".green()
+        } else {
+            "No".yellow()
+        }
+    );
+    println!(
+        "Extensions filter: {}",
+        match &extensions {
+            Some(exts) if !exts.is_empty() => exts.join(", ").cyan(),
+            _ => "None (all files)".yellow(),
+        }
+    );
+    println!(
+        "Exclude patterns: {}\n",
+        if !exclude_patterns.is_empty() {
+            args.exclude.as_deref().unwrap_or_default().cyan()
+        } else {
+            "None".yellow()
+        }
+    );
 
     // Process each source pattern
     let mut stats = Stats::default();
     for source_pattern in &args.source {
         process_pattern(
-            source_pattern, 
-            transform_type, 
-            args.preview, 
+            source_pattern,
+            transform_type,
+            args.preview,
             args.recursive,
             &exclude_patterns,
             &extensions,
-            &mut stats
+            &mut stats,
         )?;
     }
 
@@ -240,8 +263,16 @@ fn run_transformation_mode(args: &Args) -> Result<(), Box<dyn Error>> {
     println!("Errors encountered: {}", stats.errors.to_string().red());
 
     if args.preview && stats.renamed > 0 {
-        println!("\n{}", "This was a preview only. No files were actually renamed.".bold().blue());
-        println!("{}", "To apply these changes, run the command without --preview or --dry-run option.".blue());
+        println!(
+            "\n{}",
+            "This was a preview only. No files were actually renamed."
+                .bold()
+                .blue()
+        );
+        println!(
+            "{}",
+            "To apply these changes, run the command without --preview or --dry-run option.".blue()
+        );
     }
 
     Ok(())
@@ -270,7 +301,7 @@ fn run_standard_mv_mode(args: &Args) -> Result<(), Box<dyn Error>> {
 
     for source in &args.source {
         let source_path = PathBuf::from(source);
-        
+
         if !source_path.exists() {
             eprintln!("{}: Source file not found: {}", "Error".red(), source);
             continue;
@@ -287,19 +318,33 @@ fn run_standard_mv_mode(args: &Args) -> Result<(), Box<dyn Error>> {
 
         // Check if target already exists
         if target_path.exists() && source_path != target_path {
-            eprintln!("{}: Cannot move '{}' to '{}' - destination exists", 
-                "Error".red(), source, target_path.display());
+            eprintln!(
+                "{}: Cannot move '{}' to '{}' - destination exists",
+                "Error".red(),
+                source,
+                target_path.display()
+            );
             continue;
         }
 
         // Perform the move
         if args.preview {
-            println!("{} '{}' → '{}'", "Preview:".blue(), source, target_path.display());
+            println!(
+                "{} '{}' → '{}'",
+                "Preview:".blue(),
+                source,
+                target_path.display()
+            );
         } else {
             match fs::rename(&source_path, &target_path) {
                 Ok(_) => println!("Moved: '{}' → '{}'", source, target_path.display()),
-                Err(e) => eprintln!("{}: Failed to move '{}' to '{}' - {}", 
-                    "Error".red(), source, target_path.display(), e),
+                Err(e) => eprintln!(
+                    "{}: Failed to move '{}' to '{}' - {}",
+                    "Error".red(),
+                    source,
+                    target_path.display(),
+                    e
+                ),
             }
         }
     }
@@ -329,7 +374,7 @@ fn process_exclude_patterns(patterns: Option<&str>) -> Result<Vec<Regex>, Box<dy
                 })
                 .collect();
             Ok(result)
-        },
+        }
         None => Ok(Vec::new()),
     }
 }
@@ -356,7 +401,10 @@ fn process_pattern(
 
     // Use WalkDir for recursive traversal or just the directory entries
     let entries = if recursive {
-        WalkDir::new(&base_dir).into_iter().filter_map(Result::ok).collect::<Vec<_>>()
+        WalkDir::new(&base_dir)
+            .into_iter()
+            .filter_map(Result::ok)
+            .collect::<Vec<_>>()
     } else {
         let paths = fs::read_dir(&base_dir)
             .map_err(|e| format!("Failed to read directory {}: {}", base_dir.display(), e))?
@@ -366,7 +414,8 @@ fn process_pattern(
             .collect::<Vec<_>>();
 
         // Convert paths to WalkDir entries
-        paths.into_iter()
+        paths
+            .into_iter()
             .filter_map(|path| {
                 WalkDir::new(&path)
                     .max_depth(0)
@@ -379,25 +428,25 @@ fn process_pattern(
 
     for entry in entries {
         let path = entry.path();
-        
+
         // Skip directories
         if path.is_dir() {
             continue;
         }
-        
+
         // Check if path matches the pattern
         if !path_matches_pattern(path, pattern) {
             continue;
         }
-        
+
         // Process the file
         process_file(
-            path, 
-            transform_type, 
-            preview_only, 
-            exclude_patterns, 
-            extensions, 
-            stats
+            path,
+            transform_type,
+            preview_only,
+            exclude_patterns,
+            extensions,
+            stats,
         )?;
     }
 
@@ -410,7 +459,7 @@ fn path_matches_pattern(path: &Path, pattern: &str) -> bool {
     if Path::new(pattern).is_dir() {
         return true;
     }
-    
+
     // Otherwise use simple string matching for now
     // This could be improved with proper glob matching
     let path_str = path.to_string_lossy();
@@ -420,8 +469,8 @@ fn path_matches_pattern(path: &Path, pattern: &str) -> bool {
             .replace(".", "\\.")
             .replace("*", ".*")
             .replace("?", ".");
-        
-        Regex::new(&format!("^{}$", pattern_regex))
+
+        Regex::new(&format!("^{pattern_regex}$"))
             .map(|re| re.is_match(&path_str))
             .unwrap_or(false)
     } else {
@@ -442,7 +491,10 @@ fn process_file(
     let file_path_str = file_path.to_string_lossy();
 
     // Skip if the file matches an exclude pattern
-    if exclude_patterns.iter().any(|pattern| pattern.is_match(&file_path_str)) {
+    if exclude_patterns
+        .iter()
+        .any(|pattern| pattern.is_match(&file_path_str))
+    {
         stats.skipped += 1;
         return Ok(());
     }
@@ -463,7 +515,10 @@ fn process_file(
     }
 
     // Get filename and directory
-    let Some(filename) = file_path.file_name().map(|f| f.to_string_lossy().to_string()) else {
+    let Some(filename) = file_path
+        .file_name()
+        .map(|f| f.to_string_lossy().to_string())
+    else {
         stats.errors += 1;
         return Ok(());
     };
@@ -485,15 +540,24 @@ fn process_file(
 
     // Check if the new name would conflict with an existing file
     if new_path.exists() && file_path != new_path {
-        println!("{}: Cannot rename \"{}\" to \"{}\" - file already exists", 
-            "Error".red(), file_path_str, new_path.to_string_lossy());
+        println!(
+            "{}: Cannot rename \"{}\" to \"{}\" - file already exists",
+            "Error".red(),
+            file_path_str,
+            new_path.to_string_lossy()
+        );
         stats.errors += 1;
         return Ok(());
     }
 
     // Log the rename operation
-    println!("{}{}\"{}\" → \"{}\"",
-        if preview_only { "[PREVIEW] ".blue() } else { "".into() },
+    println!(
+        "{}{}\"{}\" → \"{}\"",
+        if preview_only {
+            "[PREVIEW] ".blue()
+        } else {
+            "".into()
+        },
         "Rename: ".green(),
         filename,
         new_name
@@ -507,14 +571,14 @@ fn process_file(
             .join(".config")
             .join("smv")
             .join("backups");
-        
+
         // Ensure backup directory exists
         fs::create_dir_all(&backup_dir)?;
-        
+
         // Create history manager and record operation
         let mut history_manager = HistoryManager::new(50, &backup_dir);
         history_manager.record(file_path.to_path_buf(), new_path.clone())?;
-        
+
         match fs::rename(file_path, &new_path) {
             Ok(_) => stats.renamed += 1,
             Err(e) => {

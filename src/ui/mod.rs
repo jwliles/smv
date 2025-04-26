@@ -1,6 +1,8 @@
 pub mod terminal;
 pub mod input;
 mod theme;
+#[cfg(test)]
+mod tests;
 
 pub use theme::Theme;
 
