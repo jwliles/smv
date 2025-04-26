@@ -77,7 +77,9 @@ smv --title --extensions "md,txt" documents/
 smv --snake *.txt destination_folder/
 ```
 
-### Interactive Mode
+### Interactive Modes
+
+#### REPL Interface
 
 Launch the interactive REPL interface:
 
@@ -87,6 +89,24 @@ smv -i
 # or
 smv --interactive
 ```
+
+#### Terminal UI Mode (Coming Soon)
+
+Launch the TUI file explorer with Vim-style navigation:
+
+```bash
+# Start TUI mode
+smv -T
+# or
+smv --tui
+```
+
+The TUI mode features:
+- File explorer with Vim motions (hjkl, gg, G)
+- Visual selection mode for multiple files
+- Fuzzy search using Skim integration
+- GParted-style operation queue
+- Preview of file transformations
 
 In the interactive shell:
 
@@ -182,9 +202,39 @@ SMV will not overwrite existing files unless explicitly instructed to do so, pre
 ## Requirements
 
 - Rust (Minimum supported version: 1.85.0)
+- GNU/Linux or other free operating system
 - Standard system libraries
 
+**Note**: SMV is developed exclusively for free operating systems. It is not officially tested or supported on proprietary platforms.
+
+## Development
+
+See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and development priorities.
+
 ## Roadmap
+
+### High Priority
+
+- [ ] **Fix CLI glob pattern handling**: Make CLI mode correctly handle glob patterns like `*.org`
+  ```bash
+  # Should work with glob patterns in CLI mode
+  smv --snake *.org
+  ```
+
+- [ ] **Fix kebab-case transformation**: Make kebab-case correctly convert spaces to hyphens
+  ```bash
+  # Should convert "Document Template.txt" to "document-template.txt"
+  smv --kebab "Document Template.txt"
+  ```
+
+- [ ] **Interactive mode with fuzzy search**: Integrate skim for fuzzy file selection
+  ```bash
+  # Launch interactive mode with fuzzy search capabilities
+  smv -i
+  # Then use fuzzy search to quickly find and select files
+  ```
+
+### Future Enhancements
 
 - [ ] **Multi-step transformation pipelines**: Chain multiple transforms together
   ```bash
