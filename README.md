@@ -184,7 +184,34 @@ SMV will not overwrite existing files unless explicitly instructed to do so, pre
 - Rust (Minimum supported version: 1.85.0)
 - Standard system libraries
 
+## Development
+
+See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and development priorities.
+
 ## Roadmap
+
+### High Priority
+
+- [ ] **Fix CLI glob pattern handling**: Make CLI mode correctly handle glob patterns like `*.org`
+  ```bash
+  # Should work with glob patterns in CLI mode
+  smv --snake *.org
+  ```
+
+- [ ] **Fix kebab-case transformation**: Make kebab-case correctly convert spaces to hyphens
+  ```bash
+  # Should convert "Document Template.txt" to "document-template.txt"
+  smv --kebab "Document Template.txt"
+  ```
+
+- [ ] **Interactive mode with fuzzy search**: Integrate skim for fuzzy file selection
+  ```bash
+  # Launch interactive mode with fuzzy search capabilities
+  smv -i
+  # Then use fuzzy search to quickly find and select files
+  ```
+
+### Future Enhancements
 
 - [ ] **Multi-step transformation pipelines**: Chain multiple transforms together
   ```bash
