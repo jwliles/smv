@@ -77,7 +77,9 @@ smv --title --extensions "md,txt" documents/
 smv --snake *.txt destination_folder/
 ```
 
-### Interactive Mode
+### Interactive Modes
+
+#### REPL Interface
 
 Launch the interactive REPL interface:
 
@@ -87,6 +89,24 @@ smv -i
 # or
 smv --interactive
 ```
+
+#### Terminal UI Mode (Coming Soon)
+
+Launch the TUI file explorer with Vim-style navigation:
+
+```bash
+# Start TUI mode
+smv -T
+# or
+smv --tui
+```
+
+The TUI mode features:
+- File explorer with Vim motions (hjkl, gg, G)
+- Visual selection mode for multiple files
+- Fuzzy search using Skim integration
+- GParted-style operation queue
+- Preview of file transformations
 
 In the interactive shell:
 
