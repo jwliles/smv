@@ -1,6 +1,7 @@
 mod history;
 mod repl;
 mod transformers;
+mod ui;
 
 use std::error::Error;
 use std::fs;
@@ -16,6 +17,7 @@ use walkdir::WalkDir;
 use history::HistoryManager;
 use repl::InteractiveSession;
 use transformers::{transform, TransformType};
+use ui::UserInterface;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -36,6 +38,10 @@ struct Args {
     /// Interactive mode - launch REPL interface
     #[arg(short, long, action = ArgAction::SetTrue)]
     interactive: bool,
+    
+    /// Terminal UI mode - launch the TUI file explorer
+    #[arg(short = 'T', long = "tui", action = ArgAction::SetTrue)]
+    tui: bool,
 
     /// Preview changes without applying them
     #[arg(short, long, action = ArgAction::SetTrue)]
@@ -115,6 +121,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         args.preview = true;
     }
 
+    // If TUI mode is enabled, launch the Terminal UI
+    if args.tui {
+        run_tui_mode()?;
+        return Ok(());
+    }
+    
     // If interactive mode is enabled, launch REPL
     if args.interactive {
         run_interactive_mode(args.max_history_size)?;
@@ -130,10 +142,29 @@ fn main() -> Result<(), Box<dyn Error>> {
         run_standard_mv_mode(&args)?;
     } else {
         eprintln!("Error: No files specified and no mode selected.");
-        eprintln!("Use --help for usage information or -i for interactive mode.");
+        eprintln!("Use --help for usage information, -i for interactive mode, or -T for TUI mode.");
         process::exit(1);
     }
 
+    Ok(())
+}
+
+/// Launch the TUI mode
+fn run_tui_mode() -> Result<(), Box<dyn Error>> {
+    // Setup backup directory
+    let backup_dir = home_dir()
+        .unwrap_or_else(|| PathBuf::from("/tmp"))
+        .join(".config")
+        .join("smv")
+        .join("backups");
+    
+    // Ensure backup directory exists
+    fs::create_dir_all(&backup_dir)?;
+    
+    // Create and run TUI application
+    let mut app = ui::terminal::App::new()?;
+    app.run()?;
+    
     Ok(())
 }
 
