@@ -221,47 +221,111 @@ impl InteractiveSession {
 
     /// Display help text
     fn cmd_help(&self) -> Result<(), Box<dyn Error>> {
-        println!("{}:", "Commands".bold());
-        println!(
-            "  {} <transform> <files>  - Show transformation without applying",
-            "preview".cyan()
+        println!("\n{}", "━".repeat(60).dimmed());
+        println!("{}", "SMV Help".green().bold());
+        println!("{}", "━".repeat(60).dimmed());
+        
+        println!("\n{}", "Commands:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        
+        let cmd_width = 12;
+        let desc_width = 48;
+        
+        // File operations
+        println!("  {}", "File Operations:".yellow());
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "ls".cyan(), 
+            "List files and directories in current location"
         );
-        println!(
-            "  {} <transform> <files>    - Apply transformation",
-            "apply".cyan()
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "ls <pattern>".cyan(), 
+            "List files matching a pattern (e.g., ls *.txt)"
         );
-        println!(
-            "  {} <files> --options     - Interactive renaming wizard",
-            "rename".cyan()
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "cd <dir>".cyan(), 
+            "Change to specified directory"
         );
-        println!(
-            "  {}                        - Revert last operation",
-            "undo".cyan()
+        
+        // Transformation commands
+        println!("\n  {}", "Transformation Commands:".yellow());
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "preview".cyan(), 
+            "Show preview of transformation without applying"
         );
-        println!(
-            "  {} <directory>              - Change directory",
-            "cd".cyan()
+        println!("    {:<cmd_width$} {:<desc_width$}", 
+            "preview <transform> <files>".white().dimmed(), 
+            "Example: preview snake *.txt"
         );
-        println!("  {} [pattern]                - List files", "ls".cyan());
-        println!(
-            "  {}                        - Show this help",
-            "help".cyan()
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "apply".cyan(), 
+            "Apply transformation to files"
         );
-        println!("  {}                        - Exit program", "quit".cyan());
-        println!();
-        println!("{}:", "Transformations".bold());
-        println!(
-            "  {} - Clean up spaces and special characters",
-            "clean".yellow()
+        println!("    {:<cmd_width$} {:<desc_width$}", 
+            "apply <transform> <files>".white().dimmed(), 
+            "Example: apply snake *.txt"
         );
-        println!("  {} - Convert to snake_case", "snake".yellow());
-        println!("  {} - Convert to kebab-case", "kebab".yellow());
-        println!("  {} - Convert to Title Case", "title".yellow());
-        println!("  {} - Convert to camelCase", "camel".yellow());
-        println!("  {} - Convert to PascalCase", "pascal".yellow());
-        println!("  {} - Convert to lowercase", "lower".yellow());
-        println!("  {} - Convert to UPPERCASE", "upper".yellow());
-
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "<transform>".cyan(), 
+            "Shorthand for preview (e.g., snake *.txt)"
+        );
+        
+        // Other commands
+        println!("\n  {}", "Other Commands:".yellow());
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "rename".cyan(), 
+            "Interactive rename wizard"
+        );
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "undo".cyan(), 
+            "Revert the last operation"
+        );
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "help".cyan(), 
+            "Display this help information"
+        );
+        println!("  {:<cmd_width$} {:<desc_width$}", 
+            "quit/exit".cyan(), 
+            "Exit the program"
+        );
+        
+        // Transformations
+        println!("\n{}", "Transformations:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        
+        // Display transformations in a table format
+        let transforms = [
+            ("clean".yellow().to_string(), "Remove special chars & normalize spaces"),
+            ("snake".yellow().to_string(), "Convert to snake_case (underscores)"),
+            ("kebab".yellow().to_string(), "Convert to kebab-case (hyphens)"),
+            ("title".yellow().to_string(), "Convert to Title Case"),
+            ("camel".yellow().to_string(), "Convert to camelCase"),
+            ("pascal".yellow().to_string(), "Convert to PascalCase"),
+            ("lower".yellow().to_string(), "Convert to lowercase"),
+            ("upper".yellow().to_string(), "Convert to UPPERCASE")
+        ];
+        
+        for (name, desc) in &transforms {
+            println!("  {:<20} {}", format!("{}...", name), desc);
+        }
+        
+        // Examples section
+        println!("\n{}", "Examples:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        println!("  {:<40}", 
+            "Preview snake_case transformation:".yellow()
+        );
+        println!("  {}", "preview snake *.txt".white());
+        
+        println!("\n  {:<40}", 
+            "Apply kebab-case to all MP3 files:".yellow()
+        );
+        println!("  {}", "apply kebab *.mp3".white());
+        
+        println!("\n  {:<40}", 
+            "Quick preview of title case:".yellow()
+        );
+        println!("  {}", "title my-files-*.jpg".white());
+        
         Ok(())
     }
 
