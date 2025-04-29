@@ -659,6 +659,17 @@ impl InteractiveSession {
         patterns: &[&str],
     ) -> Result<(), Box<dyn Error>> {
         let mut changes = Vec::new();
+        let mut no_changes = Vec::new();
+        let mut conflicts = Vec::new();
+
+        // Display header
+        println!("\n{}", "━".repeat(60).dimmed());
+        println!("{} {} {}", 
+            "Preview:".blue().bold(), 
+            transform_type.as_str().yellow().bold(),
+            format!("({})", patterns.join(", ")).dimmed()
+        );
+        println!("{}", "━".repeat(60).dimmed());
 
         // Process each file pattern
         for pattern in patterns {
@@ -682,39 +693,60 @@ impl InteractiveSession {
                         // Apply the transformation
                         let new_name = transform(&filename, transform_type);
 
-                        // If the name hasn't changed, skip
-                        if filename == new_name {
-                            println!("{filename} → {new_name} (no change needed)");
-                            continue;
-                        }
-
                         // Create the new path
                         let parent = path.parent().unwrap_or(Path::new(""));
                         let new_path = parent.join(&new_name);
 
-                        // Check for conflicts
-                        if new_path.exists() && path != new_path {
-                            println!(
-                                "{}: Cannot rename \"{}\" to \"{}\" - file already exists",
-                                "Conflict".red(),
-                                filename,
-                                new_name
-                            );
+                        // If the name hasn't changed, track but don't show
+                        if filename == new_name {
+                            no_changes.push(filename.to_string());
                             continue;
                         }
 
-                        changes.push((path.clone(), new_path.clone()));
-                        println!("{} \"{}\" → \"{}\"", "Preview:".blue(), filename, new_name);
+                        // Check for conflicts
+                        if new_path.exists() && path != new_path {
+                            conflicts.push((filename.to_string(), new_name.to_string()));
+                            continue;
+                        }
+
+                        changes.push((path.clone(), new_path.clone(), filename.to_string(), new_name.to_string()));
                     }
-                    Err(e) => eprintln!("{}: {}", "Error".red(), e),
+                    Err(e) => eprintln!("  {} {}", "Error:".red().bold(), e),
                 }
             }
         }
 
-        if changes.is_empty() {
-            println!("No files found or no changes needed.");
-        } else {
-            println!("\nFound {} file(s) to rename.", changes.len());
+        // Display the results in a structured way
+        if !changes.is_empty() {
+            println!("\n{}", "Files to rename:".green().bold());
+            println!("{}", "┈".repeat(60).dimmed());
+            for (_, _, src_name, dst_name) in &changes {
+                println!("  \"{}\" {}", src_name.white(), "→".dimmed());
+                println!("     \"{}\"", dst_name.green());
+            }
+        }
+
+        if !conflicts.is_empty() {
+            println!("\n{}", "Conflicts detected:".red().bold());
+            println!("{}", "┈".repeat(60).dimmed());
+            for (src_name, dst_name) in &conflicts {
+                println!("  \"{}\" {}", src_name, "→".dimmed());
+                println!("     \"{}\" {}", dst_name.dimmed(), "File already exists".red());
+            }
+        }
+
+        // Summary
+        println!("\n{}", "Summary:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        println!("  {} files matched pattern", (changes.len() + conflicts.len() + no_changes.len()).to_string().white().bold());
+        println!("  {} files ready to rename", changes.len().to_string().green().bold());
+        println!("  {} files with conflicts", conflicts.len().to_string().red().bold());
+        println!("  {} files with no changes needed", no_changes.len().to_string().yellow());
+        
+        // Instructions
+        if !changes.is_empty() {
+            println!("\n{}", "To apply these changes:".cyan());
+            println!("  {}", format!("apply {} {}", transform_type.as_str(), patterns.join(" ")).white());
         }
 
         Ok(())
