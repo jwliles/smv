@@ -210,8 +210,13 @@ impl InteractiveSession {
 
     /// Display welcome message
     fn display_welcome(&self) {
-        println!("{}", "SMV - Smart Move".bold().green());
-        println!("Type {} for available commands", "help".cyan());
+        println!("{}", "━".repeat(60).dimmed());
+        println!("{}", " SMV - Smart Move Utility ".bold().green().on_black());
+        println!("{}", "━".repeat(60).dimmed());
+        println!("  {} Rename files easily using various transformations", "•".green());
+        println!("  {} Supports multiple rename patterns and batch operations", "•".green());
+        println!("  {} Type {} for available commands", "•".green(), "help".cyan().bold());
+        println!("{}", "━".repeat(60).dimmed());
     }
 
     /// Display help text
