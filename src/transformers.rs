@@ -2,20 +2,48 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 /// Transformation types available for filename conversion
+///
+/// This enum represents all the different ways a filename can be transformed:
+/// - `Clean`: Removes special characters and normalizes spaces
+/// - `Snake`: Converts to snake_case (lowercase with underscores)
+/// - `Kebab`: Converts to kebab-case (lowercase with hyphens)
+/// - `Title`: Converts to Title Case (capitalized words with spaces)
+/// - `Camel`: Converts to camelCase (no separators, first word lowercase)
+/// - `Pascal`: Converts to PascalCase (no separators, all words capitalized)
+/// - `Lower`: Converts to all lowercase
+/// - `Upper`: Converts to all uppercase
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TransformType {
+    /// Removes special characters and normalizes spaces
     Clean,
+    /// Converts to snake_case (lowercase with underscores)
     Snake,
+    /// Converts to kebab-case (lowercase with hyphens)
     Kebab,
+    /// Converts to Title Case (capitalized words with spaces)
     Title,
+    /// Converts to camelCase (no separators, first word lowercase)
     Camel,
+    /// Converts to PascalCase (no separators, all words capitalized)
     Pascal,
+    /// Converts to all lowercase
     Lower,
+    /// Converts to all uppercase
     Upper,
 }
 
 impl TransformType {
     /// Convert a string representation to TransformType
+    ///
+    /// This method attempts to parse a string into a TransformType.
+    /// It is case-insensitive for better user experience.
+    ///
+    /// # Arguments
+    /// * `s` - The string to parse
+    ///
+    /// # Returns
+    /// * `Some(TransformType)` if the string matches a known transformation type
+    /// * `None` if the string doesn't match any known transformation type
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "clean" => Some(TransformType::Clean),
@@ -31,6 +59,12 @@ impl TransformType {
     }
 
     /// Get string representation of the transform type
+    ///
+    /// This method returns the string representation of a TransformType.
+    /// Useful for printing or serializing.
+    ///
+    /// # Returns
+    /// A string representing the transformation type
     pub fn as_str(&self) -> &'static str {
         match self {
             TransformType::Clean => "clean",
@@ -57,6 +91,16 @@ static LOWERCASE_FOLLOWED_BY_UPPERCASE_RE: Lazy<Regex> =
 static WORD_SEPARATORS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s_-]+").unwrap());
 
 /// Transform a filename according to the specified transformation type
+///
+/// This is the main public function for transforming filenames. It dispatches
+/// to the appropriate transformation function based on the specified transformation type.
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+/// * `transform_type` - The type of transformation to apply
+///
+/// # Returns
+/// A new string transformed according to the specified transformation type
 pub fn transform(name: &str, transform_type: TransformType) -> String {
     match transform_type {
         TransformType::Clean => clean(name),
@@ -71,6 +115,18 @@ pub fn transform(name: &str, transform_type: TransformType) -> String {
 }
 
 /// Clean a filename by removing special characters and normalizing spaces
+///
+/// This function performs basic cleaning operations:
+/// 1. Trimming leading and trailing whitespace
+/// 2. Normalizing multiple spaces to single spaces
+/// 3. Removing special characters
+/// 4. Removing leading and trailing special characters
+///
+/// # Arguments
+/// * `name` - The filename string to clean
+///
+/// # Returns
+/// A cleaned string with normalized spacing and no special characters
 fn clean(name: &str) -> String {
     let trimmed = name.trim();
     let normalized_spaces = MULTIPLE_SPACES_RE.replace_all(trimmed, " ");
@@ -81,6 +137,17 @@ fn clean(name: &str) -> String {
 }
 
 /// Convert a filename to snake_case
+///
+/// This function handles conversion of a string to snake_case by:
+/// 1. Converting CamelCase transitions to snake_case
+/// 2. Converting spaces and hyphens to underscores
+/// 3. Converting all characters to lowercase
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+///
+/// # Returns
+/// A new string in snake_case format
 fn snake_case(name: &str) -> String {
     let with_slashes = name.replace("::", "/");
     let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1_$2");
@@ -91,6 +158,17 @@ fn snake_case(name: &str) -> String {
 }
 
 /// Convert a filename to kebab-case
+///
+/// This function handles conversion of a string to kebab-case by:
+/// 1. Converting CamelCase transitions to kebab-case
+/// 2. Converting spaces and underscores to hyphens
+/// 3. Converting all characters to lowercase
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+///
+/// # Returns
+/// A new string in kebab-case format
 fn kebab_case(name: &str) -> String {
     let with_slashes = name.replace("::", "/");
     let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1-$2");
@@ -101,6 +179,17 @@ fn kebab_case(name: &str) -> String {
 }
 
 /// Convert a filename to Title Case
+///
+/// This function handles conversion of a string to Title Case by:
+/// 1. Splitting the string by common word separators (spaces, underscores, hyphens)
+/// 2. Capitalizing the first letter of each word
+/// 3. Joining the words with spaces
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+///
+/// # Returns
+/// A new string in Title Case format
 fn title_case(name: &str) -> String {
     WORD_SEPARATORS_RE
         .split(name)
@@ -111,6 +200,18 @@ fn title_case(name: &str) -> String {
 }
 
 /// Convert a filename to camelCase
+///
+/// This function handles conversion of a string to camelCase by:
+/// 1. Splitting the string by common word separators (spaces, underscores, hyphens)
+/// 2. Converting the first word to lowercase
+/// 3. Capitalizing the first letter of each subsequent word
+/// 4. Joining all words without separators
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+///
+/// # Returns
+/// A new string in camelCase format
 fn camel_case(name: &str) -> String {
     let words = WORD_SEPARATORS_RE
         .split(name)
@@ -130,6 +231,17 @@ fn camel_case(name: &str) -> String {
 }
 
 /// Convert a filename to PascalCase
+///
+/// This function handles conversion of a string to PascalCase by:
+/// 1. Splitting the string by common word separators (spaces, underscores, hyphens)
+/// 2. Capitalizing the first letter of each word
+/// 3. Joining all words without separators
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+///
+/// # Returns
+/// A new string in PascalCase format
 fn pascal_case(name: &str) -> String {
     WORD_SEPARATORS_RE
         .split(name)
@@ -140,6 +252,12 @@ fn pascal_case(name: &str) -> String {
 }
 
 /// Helper function to capitalize the first letter of a string
+///
+/// # Arguments
+/// * `s` - The string to capitalize
+///
+/// # Returns
+/// A new string with the first letter capitalized and the rest unchanged
 fn capitalize_first(s: &str) -> String {
     let mut chars = s.chars();
     match chars.next() {
