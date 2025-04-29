@@ -136,7 +136,7 @@ impl InteractiveSession {
 
         loop {
             // Display prompt with current directory
-            let prompt = format!("smv:{}> ", self.current_dir.display());
+            let prompt = format!("{}{}> ", "smv:".green().bold(), self.current_dir.display().to_string().cyan());
 
             // Read a line of input
             match self.editor.readline(&prompt) {
