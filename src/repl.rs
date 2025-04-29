@@ -360,8 +360,22 @@ impl InteractiveSession {
         let path_pattern = self.current_dir.join(pattern);
         let pattern_str = path_pattern.to_string_lossy();
 
+        // Display header
+        println!("\n{}", "━".repeat(60).dimmed());
+        println!("{} {}", 
+            "Directory:".blue().bold(), 
+            self.current_dir.display().to_string().white()
+        );
+        if pattern != "*" {
+            println!("{} {}", "Pattern:".blue().bold(), pattern.yellow());
+        }
+        println!("{}", "━".repeat(60).dimmed());
+
         // Use glob pattern matching
-        let mut entries = Vec::new();
+        let mut files = Vec::new();
+        let mut dirs = Vec::new();
+        let mut total_size: u64 = 0;
+
         for entry in glob(&pattern_str)? {
             match entry {
                 Ok(path) => {
@@ -370,29 +384,84 @@ impl InteractiveSession {
                         .map(|n| n.to_string_lossy().to_string())
                         .unwrap_or_else(|| "".to_string());
 
-                    let formatted = if path.is_dir() {
-                        name.blue().bold().to_string()
+                    if path.is_dir() {
+                        dirs.push(name);
                     } else {
-                        name
-                    };
-
-                    entries.push(formatted);
+                        // Get file size if possible
+                        if let Ok(metadata) = std::fs::metadata(&path) {
+                            total_size += metadata.len();
+                        }
+                        files.push(name);
+                    }
                 }
-                Err(e) => eprintln!("{}: {}", "Error".red(), e),
+                Err(e) => eprintln!("  {} {}", "Error:".red().bold(), e),
             }
         }
 
-        // Sort and print entries
-        entries.sort();
-        for chunk in entries.chunks(5) {
-            for entry in chunk {
-                print!("{entry:<20}");
+        // Sort entries
+        dirs.sort();
+        files.sort();
+
+        // Format and display directories
+        if !dirs.is_empty() {
+            println!("\n{}", "Directories:".cyan().bold());
+            
+            let mut output = String::new();
+            for (i, dir) in dirs.iter().enumerate() {
+                let formatted = format!("  {}/", dir).blue().bold().to_string();
+                output.push_str(&formatted);
+                
+                // Add padding and handle line breaks
+                if (i + 1) % 3 == 0 || i == dirs.len() - 1 {
+                    output.push('\n');
+                } else {
+                    output.push_str("  ");
+                }
             }
-            println!();
+            print!("{}", output);
         }
 
-        if entries.is_empty() {
-            println!("No files found matching pattern: {pattern}");
+        // Format and display files
+        if !files.is_empty() {
+            println!("\n{}", "Files:".green().bold());
+            
+            let mut output = String::new();
+            for (i, file) in files.iter().enumerate() {
+                let formatted = format!("  {}", file).white().to_string();
+                output.push_str(&formatted);
+                
+                // Add padding and handle line breaks
+                if (i + 1) % 3 == 0 || i == files.len() - 1 {
+                    output.push('\n');
+                } else {
+                    output.push_str("  ");
+                }
+            }
+            print!("{}", output);
+        }
+
+        // Display summary
+        println!("\n{}", "Summary:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        println!("  {} directories", dirs.len().to_string().blue().bold());
+        println!("  {} files", files.len().to_string().green().bold());
+        
+        // Format size in a human-readable way
+        if total_size > 0 {
+            let size_str = if total_size < 1024 {
+                format!("{} B", total_size)
+            } else if total_size < 1024 * 1024 {
+                format!("{:.1} KB", total_size as f64 / 1024.0)
+            } else if total_size < 1024 * 1024 * 1024 {
+                format!("{:.1} MB", total_size as f64 / (1024.0 * 1024.0))
+            } else {
+                format!("{:.1} GB", total_size as f64 / (1024.0 * 1024.0 * 1024.0))
+            };
+            println!("  {} total", size_str.white().bold());
+        }
+
+        if files.is_empty() && dirs.is_empty() {
+            println!("\n{}", "No files or directories found matching pattern.".yellow());
         }
 
         Ok(())
