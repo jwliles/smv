@@ -86,7 +86,8 @@ fn snake_case(name: &str) -> String {
     let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1_$2");
     let second_transform =
         LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1_$2");
-    second_transform.replace('-', "_").to_lowercase()
+    let with_underscores = second_transform.replace('-', "_");
+    WORD_SEPARATORS_RE.replace_all(&with_underscores, "_").to_string().to_lowercase()
 }
 
 /// Convert a filename to kebab-case
@@ -95,7 +96,8 @@ fn kebab_case(name: &str) -> String {
     let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1-$2");
     let second_transform =
         LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1-$2");
-    second_transform.replace('_', "-").to_lowercase()
+    let with_hyphens = second_transform.replace('_', "-");
+    WORD_SEPARATORS_RE.replace_all(&with_hyphens, "-").to_string().to_lowercase()
 }
 
 /// Convert a filename to Title Case
