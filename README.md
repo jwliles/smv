@@ -8,12 +8,16 @@ A powerful, Rust-based drop-in replacement for the standard Unix `mv` command wi
 - **Interactive REPL Interface** with command history and tab completion
 - **Smart File Renaming** with multiple transformation strategies:
   - Convert to snake_case (`document-name.pdf` → `document_name.pdf`)
-  - Convert to kebab-case (`document_name.pdf` → `document-name.pdf`) 
+  - Convert to kebab-case (`document_name.pdf` → `document-name.pdf`)
   - Convert to Title Case (`document_name.pdf` → `Document Name.pdf`)
   - Convert to camelCase (`document_name.pdf` → `documentName.pdf`)
   - Convert to PascalCase (`document_name.pdf` → `DocumentName.pdf`)
   - Convert to lowercase or UPPERCASE
   - Clean up spaces and special characters
+- **Directory Organization**:
+  - Group files by basename into directories
+  - Flatten directory structures by moving all files to the root
+  - Clean up empty directories after flattening
 - **Preview Mode** - See changes before they're applied
 - **Batch Processing** - Apply transformations to multiple files at once
 - **Undo Functionality** - Safely revert changes
@@ -58,6 +62,8 @@ smv old_name.txt new_name.txt
 
 ### Transformation Mode
 
+<!-- Dev Note: What gets cleaned should be chosen by the user. We would show what the default celan command would do, and tehn allow the user to make any modifications to the clean command. -->
+
 Apply transformations to filenames:
 
 ```bash
@@ -77,9 +83,26 @@ smv --title --extensions "md,txt" documents/
 smv --snake *.txt destination_folder/
 ```
 
+### Directory Organization
+
+Organize or flatten directory structures:
+
+```bash
+# Group files by basename into directories
+smv --group /path/to/files/
+
+# Preview grouping without making changes
+smv --preview --group /path/to/files/
+
+# Flatten all files from subdirectories into the root directory and remove empty directories
+smv --flatten /path/to/nested/folders/
+```
+
 ### Interactive Modes
 
 #### REPL Interface
+
+<!--Dev Note: We need to explain how to exit the REPL and interactive mode. Also let the user know when changes are saved or if they wil be lost upon exit.-->
 
 Launch the interactive REPL interface:
 
@@ -107,6 +130,8 @@ The TUI mode features:
 - Fuzzy search using Skim integration
 - GParted-style operation queue
 - Preview of file transformations
+
+<!--Dev Note: We need to explain how the backup mode works in more detail. We can have a separate file that goes all the way through it, or put enough detail in the README most folks will understand. We do need a documentation site somewhere. Maybe a wiki on GitHub or using Sphinx and REst. -->
 
 In the interactive shell:
 
@@ -148,24 +173,27 @@ Commands:
 
 ```
 Options:
-  -i, --interactive            Launch interactive REPL interface
-  -p, --preview                Preview changes without applying them
-  -r, --recursive              Process subdirectories recursively
+  -i, --interactive              Launch interactive REPL interface
+  -p, --preview                  Preview changes without applying them
+  -r, --recursive                Process subdirectories recursively
   -e, --extensions <EXTENSIONS>  Comma-separated list of file extensions to process
-  -a, --remove-accents         Remove accents from filenames
-      --clean                  Clean up spaces and special characters
-      --snake                  Convert filenames to snake_case
-      --kebab                  Convert filenames to kebab-case
-      --title                  Convert filenames to Title Case
-      --camel                  Convert filenames to camelCase
-      --pascal                 Convert filenames to PascalCase
-      --lower                  Convert filenames to lowercase
-      --upper                  Convert filenames to UPPERCASE
-      --dry-run                Same as preview - show changes without applying
-      --exclude <PATTERNS>     Comma-separated patterns to exclude
+  -a, --remove-accents           Remove accents from filenames
+      --clean                    Clean up spaces and special characters
+      --snake                    Convert filenames to snake_case
+      --kebab                    Convert filenames to kebab-case
+      --title                    Convert filenames to Title Case
+      --camel                    Convert filenames to camelCase
+      --pascal                   Convert filenames to PascalCase
+      --lower                    Convert filenames to lowercase
+      --upper                    Convert filenames to UPPERCASE
+      --dry-run                  Same as preview - show changes without applying
+      --undo                     Undo the last operation
+      --exclude <PATTERNS>       Comma-separated patterns to exclude
+      --group                    Group files by basename into directories
+      --flatten                  Flatten all files from subdirectories into a single directory and remove empty directories
       --max-history-size <SIZE>  Maximum number of operations in history [default: 50]
-  -h, --help                   Print help
-  -V, --version                Print version
+  -h, --help                     Print help
+  -V, --version                  Print version
 ```
 
 ## Transformations
@@ -189,10 +217,16 @@ SMV automatically creates backups of modified files in `~/.config/smv/backups/`.
 
 ### Undo Functionality
 
-The undo command reverts the most recent operation. In interactive mode, you can use:
+The undo command reverts the most recent operation. 
 
+In interactive mode, you can use:
 ```
 smv> undo
+```
+
+In command-line mode, you can use:
+```bash
+smv --undo
 ```
 
 ### Conflict Detection
@@ -212,6 +246,8 @@ SMV will not overwrite existing files unless explicitly instructed to do so, pre
 See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and development priorities.
 
 ## Roadmap
+
+<!--Dev Note: We need to revist this ROADMAP since we have devauled the CLI to a secondary tool and pushed the interactive TUI to the main user interface. -->
 
 ### High Priority
 
