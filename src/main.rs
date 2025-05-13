@@ -1,7 +1,9 @@
 mod history;
 mod repl;
+mod sort;
 mod transformers;
 mod ui;
+mod unsort;
 
 use std::error::Error;
 use std::fs;
@@ -38,7 +40,7 @@ struct Args {
     /// Interactive mode - launch REPL interface
     #[arg(short, long, action = ArgAction::SetTrue)]
     interactive: bool,
-    
+
     /// Terminal UI mode - launch the TUI file explorer
     #[arg(short = 'T', long = "tui", action = ArgAction::SetTrue)]
     tui: bool,
@@ -60,44 +62,56 @@ struct Args {
     remove_accents: bool,
 
     /// Convert to clean format (remove special chars, normalize spaces)
-    #[arg(long = "clean", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     clean: bool,
 
     /// Convert to snake_case
-    #[arg(long = "snake", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     snake: bool,
 
     /// Convert to kebab-case
-    #[arg(long = "kebab", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     kebab: bool,
 
     /// Convert to Title Case
-    #[arg(long = "title", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     title: bool,
 
     /// Convert to camelCase
-    #[arg(long = "camel", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     camel: bool,
 
     /// Convert to PascalCase
-    #[arg(long = "pascal", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     pascal: bool,
 
     /// Convert to lowercase
-    #[arg(long = "lower", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     lower: bool,
 
     /// Convert to UPPERCASE
-    #[arg(long = "upper", action = ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     upper: bool,
 
     /// Same as preview - show what would change without making changes
     #[arg(long, action = ArgAction::SetTrue)]
     dry_run: bool,
 
+    /// Undo the last operation
+    #[arg(long, action = ArgAction::SetTrue)]
+    undo: bool,
+
     /// Comma-separated patterns to exclude
     #[arg(long, value_name = "PATTERNS")]
     exclude: Option<String>,
+
+    /// Group files by basename into directories
+    #[arg(long, action = ArgAction::SetTrue)]
+    group: bool,
+
+    /// Flatten all files from subdirectories into a single directory and remove empty directories
+    #[arg(long, action = ArgAction::SetTrue)]
+    flatten: bool,
 
     /// Maximum number of operations to keep in history
     #[arg(long, value_name = "SIZE", default_value = "50")]
@@ -112,6 +126,70 @@ struct Stats {
     skipped: u32,
 }
 
+/// The entry point of the application.
+///
+/// This function orchestrates the overall program logic based on the
+/// provided command-line arguments and determines the mode of operation.
+/// The application supports various modes such as TUI (Terminal UI) mode,
+/// interactive REPL mode, transformation mode, and standard move (mv) mode.
+///
+/// # Modes
+/// - **TUI Mode**: If the `--tui` flag is specified, the program launches
+///   the terminal-based user interface.
+/// - **Interactive Mode**: If the `--interactive` flag is set, the program
+///   launches a REPL where users can interactively input commands.
+/// - **Transformation Mode**: Performs file operations based on transformed
+///   inputs when specific transformation-related arguments are supplied.
+/// - **Standard MV Mode**: If `--source` is provided without transformation
+///   parameters, the program functions as a standard `mv` utility.
+/// - **Dry Run and Preview Mode**: If the `--dry-run` flag is set, it enables
+///   preview mode to visualize changes without applying them.
+///
+/// # Returns
+/// Returns a `Result<(), Box<dyn Error>>` where:
+/// - `Ok(())` indicates successful execution.
+/// - `Err` signals that an error occurred during the operation.
+///
+/// # Behavior
+/// - If both `--dry-run` and `--preview` are specified, preview mode is enabled.
+/// - If neither a mode nor a source file is provided, the program prints
+///   a usage error message and exits with a non-zero status code.
+///
+/// # Errors
+/// This function propagates errors from subsidiary operations such as:
+/// - Parsing of command-line arguments.
+/// - Execution of the specific mode operations (TUI, REPL, transformations, etc.).
+///
+/// # Examples
+/// ```bash
+/// # Launch in TUI mode
+/// program_name --tui
+///
+/// # Use interactive REPL mode
+/// program_name --interactive
+///
+/// # Perform a dry run for file transformations
+/// program_name --dry-run --source file1 --destination file2
+/// ```
+///
+/// In case of invalid input or missing files, the program informs the user
+/// and exits with an appropriate error message.
+///
+/// # Panics
+/// This function does not explicitly panic, but any unhandled errors from
+/// called functions may result in a program termination.
+///
+/// # Dependencies
+/// This function relies on external functions:
+/// - `Args::parse()`: Parses command-line arguments.
+/// - `run_tui_mode()`: Handles terminal UI operations.
+/// - `run_interactive_mode(max_history_size)`: Handles interactive REPL functionality.
+/// - `is_transformation_requested(&args)`: Determines if transformation mode should be triggered.
+/// - `run_transformation_mode(&args)`: Executes transformation-based file operations.
+/// - `run_standard_mv_mode(&args)`: Executes standard move utility logic.
+///
+/// Ensure all dependencies are implemented correctly and error-handling measures
+/// are in place.
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command line arguments
     let mut args = Args::parse();
@@ -126,15 +204,27 @@ fn main() -> Result<(), Box<dyn Error>> {
         run_tui_mode()?;
         return Ok(());
     }
-    
+
     // If interactive mode is enabled, launch REPL
     if args.interactive {
         run_interactive_mode(args.max_history_size)?;
         return Ok(());
     }
 
+    // If undo mode is enabled, undo the last operation
+    if args.undo {
+        run_undo_mode(args.max_history_size)?;
+        return Ok(());
+    }
+
     // Determine which operation to perform
-    if is_transformation_requested(&args) {
+    if args.group {
+        // Group files by basename
+        run_group_mode(&args)?;
+    } else if args.flatten {
+        // Flatten directory structure
+        run_flatten_mode(&args)?;
+    } else if is_transformation_requested(&args) {
         // Operate in transformation mode
         run_transformation_mode(&args)?;
     } else if !args.source.is_empty() {
@@ -149,7 +239,38 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Launch the TUI mode
+/// Runs the Text-based User Interface (TUI) mode of the application.
+///
+/// This function performs the following steps:
+/// - Sets up the backup directory in the user's home directory or a fallback directory (`/tmp`).
+/// - Ensures that the backup directory exists, creating any necessary parent directories.
+/// - Initializes and runs the TUI application using the `ui::terminal::App` structure.
+///
+/// # Returns
+/// - `Ok(())` if the TUI application runs successfully.
+/// - `Err(Box<dyn Error>)` if an error occurs during the execution process, such as an
+///   issue with creating the backup directory or initializing/running the TUI application.
+///
+/// # Errors
+/// This function will return an error in the following cases:
+/// - The system is unable to determine the home directory, and any necessary fallback directory
+///   cannot be used or is inaccessible.
+/// - The backup directory cannot be created due to insufficient permissions or other I/O errors.
+/// - Initialization or execution of the TUI application fails due to any internal error in the
+///   `ui::terminal::App` module.
+///
+/// # Notes
+/// - The backup directory path is resolved to `$HOME/.config/smv/backups` if the home directory
+///   is available, otherwise it defaults to `/tmp/.config/smv/backups`.
+/// - The function assumes the presence of a module `ui::terminal` containing the `App` type,
+///   with methods to initialize and run the TUI application.
+///
+/// # Example
+/// ```
+/// if let Err(e) = run_tui_mode() {
+///     eprintln!("Error running TUI mode: {}", e);
+/// }
+/// ```
 fn run_tui_mode() -> Result<(), Box<dyn Error>> {
     // Setup backup directory
     let backup_dir = home_dir()
@@ -157,14 +278,14 @@ fn run_tui_mode() -> Result<(), Box<dyn Error>> {
         .join(".config")
         .join("smv")
         .join("backups");
-    
+
     // Ensure backup directory exists
     fs::create_dir_all(&backup_dir)?;
-    
+
     // Create and run TUI application
     let mut app = ui::terminal::App::new()?;
     app.run()?;
-    
+
     Ok(())
 }
 
@@ -185,6 +306,34 @@ fn run_interactive_mode(max_history_size: usize) -> Result<(), Box<dyn Error>> {
     session.run()?;
 
     Ok(())
+}
+
+/// Undo the last operation
+fn run_undo_mode(max_history_size: usize) -> Result<(), Box<dyn Error>> {
+    // Setup backup directory
+    let backup_dir = home_dir()
+        .unwrap_or_else(|| PathBuf::from("/tmp"))
+        .join(".config")
+        .join("smv")
+        .join("backups");
+
+    // Ensure backup directory exists
+    fs::create_dir_all(&backup_dir)?;
+
+    // Create history manager
+    let mut history_manager = HistoryManager::new(max_history_size, &backup_dir);
+
+    // Attempt to undo the last operation
+    match history_manager.undo() {
+        Ok(_) => {
+            println!("Operation undone successfully.");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("{}: {}", "Error".red(), e);
+            Err(e)
+        }
+    }
 }
 
 /// Check if any transformation options are enabled
@@ -378,6 +527,68 @@ fn run_standard_mv_mode(args: &Args) -> Result<(), Box<dyn Error>> {
                 ),
             }
         }
+    }
+
+    Ok(())
+}
+
+/// Run in group mode - group files by basename into directories
+fn run_group_mode(args: &Args) -> Result<(), Box<dyn Error>> {
+    if args.source.is_empty() {
+        return Err("No directory specified for grouping".into());
+    }
+
+    println!("\n{}\n", "Smart Move - Group Files by Basename".bold());
+
+    for source_dir in &args.source {
+        println!("Processing directory: {}", source_dir.cyan());
+        sort::group_by_basename(source_dir, args.preview)?;
+    }
+
+    if args.preview {
+        println!(
+            "\n{}",
+            "This was a preview only. No files were actually moved."
+                .bold()
+                .blue()
+        );
+        println!(
+            "{}",
+            "To apply these changes, run the command without --preview or --dry-run option.".blue()
+        );
+    }
+
+    Ok(())
+}
+
+/// Run in flatten mode - move all files to the root directory
+fn run_flatten_mode(args: &Args) -> Result<(), Box<dyn Error>> {
+    if args.source.is_empty() {
+        return Err("No directory specified for flattening".into());
+    }
+
+    println!("\n{}\n", "Smart Move - Flatten Directory Structure".bold());
+
+    for source_dir in &args.source {
+        println!("Processing directory: {}", source_dir.cyan());
+        unsort::flatten_directory(source_dir, args.preview)?;
+
+        // Always remove empty directories as part of flatten
+        println!("\nRemoving empty directories:");
+        unsort::remove_empty_dirs(source_dir, args.preview)?;
+    }
+
+    if args.preview {
+        println!(
+            "\n{}",
+            "This was a preview only. No files were actually moved."
+                .bold()
+                .blue()
+        );
+        println!(
+            "{}",
+            "To apply these changes, run the command without --preview or --dry-run option.".blue()
+        );
     }
 
     Ok(())
