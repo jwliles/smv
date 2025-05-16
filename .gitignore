@@ -90,3 +90,5 @@ coverage/
 
 # Generated test files
 /tests/generated/
+
+**/.claude/settings.local.json

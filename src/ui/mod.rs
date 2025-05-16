@@ -1,19 +1,19 @@
-pub mod terminal;
 pub mod input;
-mod theme;
+pub mod terminal;
 #[cfg(test)]
 mod tests;
+mod theme;
 
 pub use theme::Theme;
 
-use std::path::PathBuf;
 use std::error::Error;
+use std::path::PathBuf;
 
 /// The main UI trait that all UI implementations must implement
 pub trait UserInterface {
     /// Run the UI until it exits
     fn run(&mut self) -> Result<(), Box<dyn Error>>;
-    
+
     /// Open a specific directory in the UI
     fn open_directory(&mut self, path: PathBuf) -> Result<(), Box<dyn Error>>;
 }

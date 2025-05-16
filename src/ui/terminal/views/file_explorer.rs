@@ -1,12 +1,12 @@
-use std::path::{Path, PathBuf};
-use std::fs;
 use std::error::Error;
+use std::fs;
+pub use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::widgets::ListState;
 
-use crate::ui::UiAction;
 use crate::ui::terminal::{AppMode, KeyResult};
+use crate::ui::UiAction;
 use skim::prelude::*;
 
 /// File information for display
@@ -51,14 +51,14 @@ impl FileExplorer {
             search_pattern: None,
             filtered_files: Vec::new(),
         };
-        
+
         // Load initial directory
         let _ = explorer.reload_files();
         explorer.state.select(Some(0));
-        
+
         explorer
     }
-    
+
     /// Change directory
     pub fn change_directory(&mut self, dir: PathBuf) -> Result<(), Box<dyn Error>> {
         self.current_dir = dir;
@@ -69,13 +69,17 @@ impl FileExplorer {
         self.filtered_files.clear();
         Ok(())
     }
-    
+
     /// Reload files in the current directory
     pub fn reload_files(&mut self) -> Result<(), Box<dyn Error>> {
         self.files.clear();
-        
-        // Always add parent directory entry
-        let parent = self.current_dir.parent().unwrap_or(&self.current_dir).to_path_buf();
+
+        // Always add a parent directory entry
+        let parent = self
+            .current_dir
+            .parent()
+            .unwrap_or(&self.current_dir)
+            .to_path_buf();
         self.files.push(FileItem {
             name: "..".to_string(),
             path: parent,
@@ -83,14 +87,14 @@ impl FileExplorer {
             is_symlink: false,
             size: 0,
         });
-        
+
         // Read directory entries
         let entries = fs::read_dir(&self.current_dir)?;
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
             let metadata = entry.metadata()?;
-            
+
             self.files.push(FileItem {
                 name: entry.file_name().to_string_lossy().to_string(),
                 path,
@@ -99,28 +103,27 @@ impl FileExplorer {
                 size: metadata.len(),
             });
         }
-        
+
         // Sort: directories first, then files alphabetically
-        self.files.sort_by(|a, b| {
-            match (a.is_dir, b.is_dir) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-            }
+        self.files.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
         });
-        
-        // Update filtered files if search is active
-        if let Some(pattern) = &self.search_pattern {
-            self.filter_files(pattern);
+
+        // Update filtered files if the search is active
+        if let Some(pattern) = self.search_pattern.as_ref() {
+            let pattern = pattern.clone();
+            self.filter_files(&pattern);
         }
-        
+
         Ok(())
     }
-    
+
     /// Get the selected file
     pub fn selected(&self) -> Option<&FileItem> {
         let index = self.state.selected()?;
-        
+
         if !self.filtered_files.is_empty() {
             // If filtered, map through filtered indexes
             let actual_index = self.filtered_files.get(index)?;
@@ -130,7 +133,7 @@ impl FileExplorer {
             self.files.get(index)
         }
     }
-    
+
     /// Handle key events
     pub fn handle_key(&mut self, key: KeyEvent, mode: &AppMode) -> KeyResult {
         match mode {
@@ -139,35 +142,33 @@ impl FileExplorer {
             _ => KeyResult::NotHandled,
         }
     }
-    
+
     /// Start fuzzy search using skim
     pub fn start_fuzzy_search(&mut self) -> Result<(), Box<dyn Error>> {
         // Create the input source from file names
-        let file_names: Vec<String> = self.files.iter()
-            .map(|f| f.name.clone())
-            .collect();
-        
+        let file_names: Vec<String> = self.files.iter().map(|f| f.name.clone()).collect();
+
         let item_reader = SkimItemReader::default();
         let items = item_reader.of_bufread(std::io::Cursor::new(file_names.join("\n")));
-        
+
         // Create skim options
         let options = SkimOptionsBuilder::default()
             .height(Some("50%"))
             .multi(true)
             .build()
             .unwrap();
-        
+
         // Run skim
         let selected_items = Skim::run_with(&options, Some(items))
             .map(|out| out.selected_items)
             .unwrap_or_else(|| Vec::new());
-        
+
         // Process selected items
         if !selected_items.is_empty() {
             // For now, select the first matched item
             if let Some(item) = selected_items.first() {
                 let text = item.text();
-                // Find corresponding index in files
+                // Find the corresponding index in files
                 for (i, file) in self.files.iter().enumerate() {
                     if file.name == text {
                         self.state.select(Some(i));
@@ -176,14 +177,14 @@ impl FileExplorer {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Filter files by pattern
     fn filter_files(&mut self, pattern: &str) {
         self.filtered_files.clear();
-        
+
         // Simple substring search for now
         let pattern = pattern.to_lowercase();
         for (i, file) in self.files.iter().enumerate() {
@@ -191,7 +192,7 @@ impl FileExplorer {
                 self.filtered_files.push(i);
             }
         }
-        
+
         // Reset selection
         if !self.filtered_files.is_empty() {
             self.state.select(Some(0));
@@ -199,7 +200,7 @@ impl FileExplorer {
             self.state.select(None);
         }
     }
-    
+
     /// Handle keys in normal mode
     fn handle_normal_key(&mut self, key: KeyEvent) -> KeyResult {
         match key.code {
@@ -228,7 +229,7 @@ impl FileExplorer {
                 self.select_last();
                 KeyResult::Handled(None)
             }
-            
+
             // Directory navigation
             KeyCode::Right | KeyCode::Char('l') => {
                 if let Some(item) = self.selected() {
@@ -245,18 +246,18 @@ impl FileExplorer {
                 }
                 KeyResult::Handled(None)
             }
-            
+
             // Search
             KeyCode::Char('/') => {
                 // Start search (would be implemented with a search prompt)
                 KeyResult::Handled(None)
             }
             KeyCode::Char('f') => {
-                // Start fuzzy search
+                // Start a fuzzy search
                 let _ = self.start_fuzzy_search();
                 KeyResult::Handled(None)
             }
-            
+
             // Actions
             KeyCode::Enter => {
                 // Select current file/directory
@@ -269,17 +270,17 @@ impl FileExplorer {
                 }
                 KeyResult::Handled(None)
             }
-            
+
             _ => KeyResult::NotHandled,
         }
     }
-    
+
     /// Handle keys in visual mode
     fn handle_visual_key(&mut self, key: KeyEvent) -> KeyResult {
         match key.code {
             // Navigation (same as normal mode)
             KeyCode::Down | KeyCode::Char('j') => {
-                // Set start of selection if not set
+                // Set the start of selection if not set
                 if self.visual_selection_start.is_none() {
                     self.visual_selection_start = self.state.selected();
                 }
@@ -287,14 +288,14 @@ impl FileExplorer {
                 KeyResult::Handled(None)
             }
             KeyCode::Up | KeyCode::Char('k') => {
-                // Set start of selection if not set
+                // Set the start of selection if not set
                 if self.visual_selection_start.is_none() {
                     self.visual_selection_start = self.state.selected();
                 }
                 self.select_prev(1);
                 KeyResult::Handled(None)
             }
-            
+
             // Visual mode actions
             KeyCode::Char('y') => {
                 // Yank (copy) selected files
@@ -306,22 +307,22 @@ impl FileExplorer {
                 self.visual_selection_start = None;
                 KeyResult::Handled(Some(UiAction::Continue))
             }
-            
+
             _ => KeyResult::NotHandled,
         }
     }
-    
+
     /// Get all files in the visual selection
     pub fn visual_selection(&self) -> Vec<&FileItem> {
         let mut result = Vec::new();
-        
+
         if let (Some(start), Some(current)) = (self.visual_selection_start, self.state.selected()) {
             let (min, max) = if start <= current {
                 (start, current)
             } else {
                 (current, start)
             };
-            
+
             for i in min..=max {
                 if let Some(file) = self.files.get(i) {
                     result.push(file);
@@ -332,10 +333,10 @@ impl FileExplorer {
                 result.push(file);
             }
         }
-        
+
         result
     }
-    
+
     /// Select the next item
     fn select_next(&mut self, count: usize) {
         if self.filtered_files.is_empty() {
@@ -344,7 +345,7 @@ impl FileExplorer {
             if len == 0 {
                 return;
             }
-            
+
             let i = match self.state.selected() {
                 Some(i) => (i + count) % len,
                 None => 0,
@@ -356,7 +357,7 @@ impl FileExplorer {
             if len == 0 {
                 return;
             }
-            
+
             let i = match self.state.selected() {
                 Some(i) => (i + count) % len,
                 None => 0,
@@ -364,7 +365,7 @@ impl FileExplorer {
             self.state.select(Some(i));
         }
     }
-    
+
     /// Select the previous item
     fn select_prev(&mut self, count: usize) {
         if self.filtered_files.is_empty() {
@@ -373,7 +374,7 @@ impl FileExplorer {
             if len == 0 {
                 return;
             }
-            
+
             let i = match self.state.selected() {
                 Some(i) => {
                     if i >= count {
@@ -391,7 +392,7 @@ impl FileExplorer {
             if len == 0 {
                 return;
             }
-            
+
             let i = match self.state.selected() {
                 Some(i) => {
                     if i >= count {
@@ -405,14 +406,14 @@ impl FileExplorer {
             self.state.select(Some(i));
         }
     }
-    
+
     /// Select the first item
     fn select_first(&mut self) {
         if !self.files.is_empty() {
             self.state.select(Some(0));
         }
     }
-    
+
     /// Select the last item
     fn select_last(&mut self) {
         if self.filtered_files.is_empty() {

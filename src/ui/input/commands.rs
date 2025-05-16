@@ -47,12 +47,12 @@ pub enum TransformType {
 /// Parse a command string
 pub fn parse_command(command: &str) -> Option<Command> {
     let trimmed = command.trim();
-    
+
     // Split into command and arguments
     let parts: Vec<&str> = trimmed.splitn(2, ' ').collect();
     let cmd = parts[0];
     let args = parts.get(1).unwrap_or(&"").trim();
-    
+
     match cmd {
         "cd" | "chdir" => {
             if args.is_empty() {

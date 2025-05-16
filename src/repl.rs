@@ -136,7 +136,11 @@ impl InteractiveSession {
 
         loop {
             // Display prompt with current directory
-            let prompt = format!("{}{}> ", "smv:".green().bold(), self.current_dir.display().to_string().cyan());
+            let prompt = format!(
+                "{}{}> ",
+                "smv:".green().bold(),
+                self.current_dir.display().to_string().cyan()
+            );
 
             // Read a line of input
             match self.editor.readline(&prompt) {
@@ -213,9 +217,19 @@ impl InteractiveSession {
         println!("{}", "━".repeat(60).dimmed());
         println!("{}", " SMV - Smart Move Utility ".bold().green().on_black());
         println!("{}", "━".repeat(60).dimmed());
-        println!("  {} Rename files easily using various transformations", "•".green());
-        println!("  {} Supports multiple rename patterns and batch operations", "•".green());
-        println!("  {} Type {} for available commands", "•".green(), "help".cyan().bold());
+        println!(
+            "  {} Rename files easily using various transformations",
+            "•".green()
+        );
+        println!(
+            "  {} Supports multiple rename patterns and batch operations",
+            "•".green()
+        );
+        println!(
+            "  {} Type {} for available commands",
+            "•".green(),
+            "help".cyan().bold()
+        );
         println!("{}", "━".repeat(60).dimmed());
     }
 
@@ -224,108 +238,123 @@ impl InteractiveSession {
         println!("\n{}", "━".repeat(60).dimmed());
         println!("{}", "SMV Help".green().bold());
         println!("{}", "━".repeat(60).dimmed());
-        
+
         println!("\n{}", "Commands:".cyan().bold());
         println!("{}", "┈".repeat(60).dimmed());
-        
+
         let cmd_width = 12;
         let desc_width = 48;
-        
+
         // File operations
         println!("  {}", "File Operations:".yellow());
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "ls".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "ls".cyan(),
             "List files and directories in current location"
         );
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "ls <pattern>".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "ls <pattern>".cyan(),
             "List files matching a pattern (e.g., ls *.txt)"
         );
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "cd <dir>".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "cd <dir>".cyan(),
             "Change to specified directory"
         );
-        
+
         // Transformation commands
         println!("\n  {}", "Transformation Commands:".yellow());
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "preview".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "preview".cyan(),
             "Show preview of transformation without applying"
         );
-        println!("    {:<cmd_width$} {:<desc_width$}", 
-            "preview <transform> <files>".white().dimmed(), 
+        println!(
+            "    {:<cmd_width$} {:<desc_width$}",
+            "preview <transform> <files>".white().dimmed(),
             "Example: preview snake *.txt"
         );
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "apply".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "apply".cyan(),
             "Apply transformation to files"
         );
-        println!("    {:<cmd_width$} {:<desc_width$}", 
-            "apply <transform> <files>".white().dimmed(), 
+        println!(
+            "    {:<cmd_width$} {:<desc_width$}",
+            "apply <transform> <files>".white().dimmed(),
             "Example: apply snake *.txt"
         );
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "<transform>".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "<transform>".cyan(),
             "Shorthand for preview (e.g., snake *.txt)"
         );
-        
+
         // Other commands
         println!("\n  {}", "Other Commands:".yellow());
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "rename".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "rename".cyan(),
             "Interactive rename wizard"
         );
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "undo".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "undo".cyan(),
             "Revert the last operation"
         );
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "help".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "help".cyan(),
             "Display this help information"
         );
-        println!("  {:<cmd_width$} {:<desc_width$}", 
-            "quit/exit".cyan(), 
+        println!(
+            "  {:<cmd_width$} {:<desc_width$}",
+            "quit/exit".cyan(),
             "Exit the program"
         );
-        
+
         // Transformations
         println!("\n{}", "Transformations:".cyan().bold());
         println!("{}", "┈".repeat(60).dimmed());
-        
+
         // Display transformations in a table format
         let transforms = [
-            ("clean".yellow().to_string(), "Remove special chars & normalize spaces"),
-            ("snake".yellow().to_string(), "Convert to snake_case (underscores)"),
-            ("kebab".yellow().to_string(), "Convert to kebab-case (hyphens)"),
+            (
+                "clean".yellow().to_string(),
+                "Remove special chars & normalize spaces",
+            ),
+            (
+                "snake".yellow().to_string(),
+                "Convert to snake_case (underscores)",
+            ),
+            (
+                "kebab".yellow().to_string(),
+                "Convert to kebab-case (hyphens)",
+            ),
             ("title".yellow().to_string(), "Convert to Title Case"),
             ("camel".yellow().to_string(), "Convert to camelCase"),
             ("pascal".yellow().to_string(), "Convert to PascalCase"),
             ("lower".yellow().to_string(), "Convert to lowercase"),
-            ("upper".yellow().to_string(), "Convert to UPPERCASE")
+            ("upper".yellow().to_string(), "Convert to UPPERCASE"),
         ];
-        
+
         for (name, desc) in &transforms {
             println!("  {:<20} {}", format!("{}...", name), desc);
         }
-        
+
         // Examples section
         println!("\n{}", "Examples:".cyan().bold());
         println!("{}", "┈".repeat(60).dimmed());
-        println!("  {:<40}", 
-            "Preview snake_case transformation:".yellow()
-        );
+        println!("  {:<40}", "Preview snake_case transformation:".yellow());
         println!("  {}", "preview snake *.txt".white());
-        
-        println!("\n  {:<40}", 
-            "Apply kebab-case to all MP3 files:".yellow()
-        );
+
+        println!("\n  {:<40}", "Apply kebab-case to all MP3 files:".yellow());
         println!("  {}", "apply kebab *.mp3".white());
-        
-        println!("\n  {:<40}", 
-            "Quick preview of title case:".yellow()
-        );
+
+        println!("\n  {:<40}", "Quick preview of title case:".yellow());
         println!("  {}", "title my-files-*.jpg".white());
-        
+
         Ok(())
     }
 
@@ -362,8 +391,9 @@ impl InteractiveSession {
 
         // Display header
         println!("\n{}", "━".repeat(60).dimmed());
-        println!("{} {}", 
-            "Directory:".blue().bold(), 
+        println!(
+            "{} {}",
+            "Directory:".blue().bold(),
             self.current_dir.display().to_string().white()
         );
         if pattern != "*" {
@@ -405,12 +435,12 @@ impl InteractiveSession {
         // Format and display directories
         if !dirs.is_empty() {
             println!("\n{}", "Directories:".cyan().bold());
-            
+
             let mut output = String::new();
             for (i, dir) in dirs.iter().enumerate() {
                 let formatted = format!("  {}/", dir).blue().bold().to_string();
                 output.push_str(&formatted);
-                
+
                 // Add padding and handle line breaks
                 if (i + 1) % 3 == 0 || i == dirs.len() - 1 {
                     output.push('\n');
@@ -424,12 +454,12 @@ impl InteractiveSession {
         // Format and display files
         if !files.is_empty() {
             println!("\n{}", "Files:".green().bold());
-            
+
             let mut output = String::new();
             for (i, file) in files.iter().enumerate() {
                 let formatted = format!("  {}", file).white().to_string();
                 output.push_str(&formatted);
-                
+
                 // Add padding and handle line breaks
                 if (i + 1) % 3 == 0 || i == files.len() - 1 {
                     output.push('\n');
@@ -445,7 +475,7 @@ impl InteractiveSession {
         println!("{}", "┈".repeat(60).dimmed());
         println!("  {} directories", dirs.len().to_string().blue().bold());
         println!("  {} files", files.len().to_string().green().bold());
-        
+
         // Format size in a human-readable way
         if total_size > 0 {
             let size_str = if total_size < 1024 {
@@ -461,7 +491,10 @@ impl InteractiveSession {
         }
 
         if files.is_empty() && dirs.is_empty() {
-            println!("\n{}", "No files or directories found matching pattern.".yellow());
+            println!(
+                "\n{}",
+                "No files or directories found matching pattern.".yellow()
+            );
         }
 
         Ok(())
@@ -664,8 +697,9 @@ impl InteractiveSession {
 
         // Display header
         println!("\n{}", "━".repeat(60).dimmed());
-        println!("{} {} {}", 
-            "Preview:".blue().bold(), 
+        println!(
+            "{} {} {}",
+            "Preview:".blue().bold(),
             transform_type.as_str().yellow().bold(),
             format!("({})", patterns.join(", ")).dimmed()
         );
@@ -709,7 +743,12 @@ impl InteractiveSession {
                             continue;
                         }
 
-                        changes.push((path.clone(), new_path.clone(), filename.to_string(), new_name.to_string()));
+                        changes.push((
+                            path.clone(),
+                            new_path.clone(),
+                            filename.to_string(),
+                            new_name.to_string(),
+                        ));
                     }
                     Err(e) => eprintln!("  {} {}", "Error:".red().bold(), e),
                 }
@@ -731,22 +770,44 @@ impl InteractiveSession {
             println!("{}", "┈".repeat(60).dimmed());
             for (src_name, dst_name) in &conflicts {
                 println!("  \"{}\" {}", src_name, "→".dimmed());
-                println!("     \"{}\" {}", dst_name.dimmed(), "File already exists".red());
+                println!(
+                    "     \"{}\" {}",
+                    dst_name.dimmed(),
+                    "File already exists".red()
+                );
             }
         }
 
         // Summary
         println!("\n{}", "Summary:".cyan().bold());
         println!("{}", "┈".repeat(60).dimmed());
-        println!("  {} files matched pattern", (changes.len() + conflicts.len() + no_changes.len()).to_string().white().bold());
-        println!("  {} files ready to rename", changes.len().to_string().green().bold());
-        println!("  {} files with conflicts", conflicts.len().to_string().red().bold());
-        println!("  {} files with no changes needed", no_changes.len().to_string().yellow());
-        
+        println!(
+            "  {} files matched pattern",
+            (changes.len() + conflicts.len() + no_changes.len())
+                .to_string()
+                .white()
+                .bold()
+        );
+        println!(
+            "  {} files ready to rename",
+            changes.len().to_string().green().bold()
+        );
+        println!(
+            "  {} files with conflicts",
+            conflicts.len().to_string().red().bold()
+        );
+        println!(
+            "  {} files with no changes needed",
+            no_changes.len().to_string().yellow()
+        );
+
         // Instructions
         if !changes.is_empty() {
             println!("\n{}", "To apply these changes:".cyan());
-            println!("  {}", format!("apply {} {}", transform_type.as_str(), patterns.join(" ")).white());
+            println!(
+                "  {}",
+                format!("apply {} {}", transform_type.as_str(), patterns.join(" ")).white()
+            );
         }
 
         Ok(())
@@ -759,6 +820,18 @@ impl InteractiveSession {
         patterns: &[&str],
     ) -> Result<(), Box<dyn Error>> {
         let mut changes = Vec::new();
+        let mut no_changes = Vec::new();
+        let mut conflicts = Vec::new();
+
+        // Display header
+        println!("\n{}", "━".repeat(60).dimmed());
+        println!(
+            "{} {} {}",
+            "Apply:".blue().bold(),
+            transform_type.as_str().yellow().bold(),
+            format!("({})", patterns.join(", ")).dimmed()
+        );
+        println!("{}", "━".repeat(60).dimmed());
 
         // Process each file pattern
         for pattern in patterns {
@@ -782,8 +855,9 @@ impl InteractiveSession {
                         // Apply the transformation
                         let new_name = transform(&filename, transform_type);
 
-                        // If the name hasn't changed, skip
+                        // If the name hasn't changed, track but don't show
                         if filename == new_name {
+                            no_changes.push(filename.to_string());
                             continue;
                         }
 
@@ -793,49 +867,100 @@ impl InteractiveSession {
 
                         // Check for conflicts
                         if new_path.exists() && path != new_path {
-                            println!(
-                                "{}: Cannot rename \"{}\" to \"{}\" - file already exists",
-                                "Conflict".red(),
-                                filename,
-                                new_name
-                            );
+                            conflicts.push((filename.to_string(), new_name.to_string()));
                             continue;
                         }
 
-                        changes.push((path.clone(), new_path.clone()));
+                        changes.push((
+                            path.clone(),
+                            new_path.clone(),
+                            filename.to_string(),
+                            new_name.to_string(),
+                        ));
                     }
-                    Err(e) => eprintln!("{}: {}", "Error".red(), e),
+                    Err(e) => eprintln!("  {} {}", "Error:".red().bold(), e),
                 }
             }
         }
 
-        if changes.is_empty() {
-            println!("No files found or no changes needed.");
+        if changes.is_empty() && conflicts.is_empty() {
+            println!("\n{}", "No files found or no changes needed.".yellow());
             return Ok(());
         }
 
-        // Display changes
-        println!("\nThe following {} file(s) will be renamed:", changes.len());
-        for (src, dst) in &changes {
-            let src_name = src.file_name().unwrap_or_default().to_string_lossy();
-            let dst_name = dst.file_name().unwrap_or_default().to_string_lossy();
-            println!("  \"{src_name}\" → \"{dst_name}\"");
+        // Display the results in a structured way
+        if !changes.is_empty() {
+            println!("\n{}", "Files to rename:".green().bold());
+            println!("{}", "┈".repeat(60).dimmed());
+            for (_src, _dst, src_name, dst_name) in &changes {
+                println!("  \"{}\" {}", src_name.white(), "→".dimmed());
+                println!("     \"{}\"", dst_name.green());
+            }
+        }
+
+        if !conflicts.is_empty() {
+            println!("\n{}", "Conflicts detected:".red().bold());
+            println!("{}", "┈".repeat(60).dimmed());
+            for (src_name, dst_name) in &conflicts {
+                println!("  \"{}\" {}", src_name, "→".dimmed());
+                println!(
+                    "     \"{}\" {}",
+                    dst_name.dimmed(),
+                    "File already exists".red()
+                );
+            }
+        }
+
+        // Summary
+        println!("\n{}", "Summary:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        println!(
+            "  {} files matched pattern",
+            (changes.len() + conflicts.len() + no_changes.len())
+                .to_string()
+                .white()
+                .bold()
+        );
+        println!(
+            "  {} files ready to rename",
+            changes.len().to_string().green().bold()
+        );
+        println!(
+            "  {} files with conflicts",
+            conflicts.len().to_string().red().bold()
+        );
+        println!(
+            "  {} files with no changes needed",
+            no_changes.len().to_string().yellow()
+        );
+
+        if changes.is_empty() {
+            println!("\n{}", "No changes to apply.".yellow());
+            return Ok(());
         }
 
         // Confirm with user
-        print!("\nApply these changes? [y/N] ");
+        println!("\n{}", "Confirmation:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        print!("Apply these changes? [y/N] ");
         io::stdout().flush()?;
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
 
         if !input.trim().eq_ignore_ascii_case("y") {
-            println!("Operation cancelled.");
+            println!("{}", "Operation cancelled.".yellow());
             return Ok(());
         }
 
-        // Apply changes
-        for (src, dst) in changes {
+        // Apply changes section
+        println!("\n{}", "Applying changes:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+
+        let mut success_count = 0;
+        let mut error_count = 0;
+
+        for (src, dst, _, _) in changes {
             // Record the operation for undo
             self.history_manager.record(src.clone(), dst.clone())?;
 
@@ -844,20 +969,51 @@ impl InteractiveSession {
                 Ok(_) => {
                     let src_name = src.file_name().unwrap_or_default().to_string_lossy();
                     let dst_name = dst.file_name().unwrap_or_default().to_string_lossy();
-                    println!("Renamed: \"{src_name}\" → \"{dst_name}\"");
+                    println!(
+                        "  {} \"{}\" {} \"{}\"",
+                        "✓".green(),
+                        src_name.white(),
+                        "→".dimmed(),
+                        dst_name.green()
+                    );
+                    success_count += 1;
                 }
                 Err(e) => {
+                    let src_name = src.file_name().unwrap_or_default().to_string_lossy();
                     eprintln!(
-                        "{}: Failed to rename \"{}\" - {}",
-                        "Error".red(),
-                        src.display(),
+                        "  {} {} \"{}\" - {}",
+                        "✗".red(),
+                        "Failed to rename".red(),
+                        src_name,
                         e
                     );
+                    error_count += 1;
                 }
             }
         }
 
-        println!("\nRenaming complete!");
+        // Result summary
+        println!("\n{}", "Results:".cyan().bold());
+        println!("{}", "┈".repeat(60).dimmed());
+        println!(
+            "  {} successfully renamed",
+            success_count.to_string().green().bold()
+        );
+
+        if error_count > 0 {
+            println!(
+                "  {} failed to rename",
+                error_count.to_string().red().bold()
+            );
+        }
+
+        if success_count > 0 {
+            println!(
+                "\n{}",
+                "Use 'undo' command to revert these changes if needed.".cyan()
+            );
+        }
+
         Ok(())
     }
 }

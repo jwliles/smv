@@ -5,8 +5,8 @@ use ratatui::{
     widgets::{Block, StatefulWidget, Widget},
 };
 
-use crate::ui::Theme;
 use crate::ui::terminal::views::FileExplorer;
+use crate::ui::Theme;
 
 /// Custom widget for displaying file items
 pub struct FileItemWidget<'a> {
@@ -26,12 +26,12 @@ impl<'a> FileItemWidget<'a> {
             visual_selection: false,
         }
     }
-    
+
     pub fn block(mut self, block: Block<'a>) -> Self {
         self.block = Some(block);
         self
     }
-    
+
     pub fn visual_selection(mut self, active: bool) -> Self {
         self.visual_selection = active;
         self
@@ -40,8 +40,8 @@ impl<'a> FileItemWidget<'a> {
 
 impl<'a> StatefulWidget for FileItemWidget<'a> {
     type State = FileExplorer;
-    
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+
+    fn render(self, area: Rect, buf: &mut Buffer, _state: &mut Self::State) {
         // Apply block if present
         let area = match self.block {
             Some(b) => {
@@ -51,16 +51,16 @@ impl<'a> StatefulWidget for FileItemWidget<'a> {
             }
             None => area,
         };
-        
+
         // Calculate available space for rendering
         let height = area.height as usize;
         if height == 0 {
             return;
         }
-        
+
         // Render file items
         // This is a placeholder - would need to be implemented based on the actual FileExplorer state
-        
+
         // TODO: Implement actual rendering logic for files
     }
 }

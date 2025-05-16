@@ -154,7 +154,10 @@ fn snake_case(name: &str) -> String {
     let second_transform =
         LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1_$2");
     let with_underscores = second_transform.replace('-', "_");
-    WORD_SEPARATORS_RE.replace_all(&with_underscores, "_").to_string().to_lowercase()
+    WORD_SEPARATORS_RE
+        .replace_all(&with_underscores, "_")
+        .to_string()
+        .to_lowercase()
 }
 
 /// Convert a filename to kebab-case
@@ -175,7 +178,10 @@ fn kebab_case(name: &str) -> String {
     let second_transform =
         LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1-$2");
     let with_hyphens = second_transform.replace('_', "-");
-    WORD_SEPARATORS_RE.replace_all(&with_hyphens, "-").to_string().to_lowercase()
+    WORD_SEPARATORS_RE
+        .replace_all(&with_hyphens, "-")
+        .to_string()
+        .to_lowercase()
 }
 
 /// Convert a filename to Title Case
@@ -283,7 +289,10 @@ mod tests {
         assert_eq!(snake_case("My-File.txt"), "my_file.txt");
         assert_eq!(snake_case("already_snake"), "already_snake");
         assert_eq!(snake_case("Words With Spaces"), "words_with_spaces");
-        assert_eq!(snake_case("Mix-of spaces_and-hyphens"), "mix_of_spaces_and_hyphens");
+        assert_eq!(
+            snake_case("Mix-of spaces_and-hyphens"),
+            "mix_of_spaces_and_hyphens"
+        );
     }
 
     #[test]
@@ -292,7 +301,10 @@ mod tests {
         assert_eq!(kebab_case("My_File.txt"), "my-file.txt");
         assert_eq!(kebab_case("already-kebab"), "already-kebab");
         assert_eq!(kebab_case("Words With Spaces"), "words-with-spaces");
-        assert_eq!(kebab_case("Mix-of spaces_and_underscores"), "mix-of-spaces-and-underscores");
+        assert_eq!(
+            kebab_case("Mix-of spaces_and_underscores"),
+            "mix-of-spaces-and-underscores"
+        );
     }
 
     #[test]
@@ -301,7 +313,7 @@ mod tests {
         assert_eq!(title_case("my-file.txt"), "My File Txt");
         assert_eq!(title_case("already Title Case"), "Already Title Case");
     }
-    
+
     #[test]
     fn test_camel_case() {
         assert_eq!(camel_case("hello_world"), "helloWorld");

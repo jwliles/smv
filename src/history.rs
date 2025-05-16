@@ -41,7 +41,7 @@ impl HistoryManager {
 
     /// Record a new operation
     pub fn record(&mut self, source: PathBuf, destination: PathBuf) -> Result<(), Box<dyn Error>> {
-        // Create backup if source file exists
+        // Create backup if a source file exists
         if source.exists() {
             self.create_backup(&source)?;
         }
