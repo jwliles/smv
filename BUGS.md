@@ -107,43 +107,97 @@
 
   Impact: Severely limits usability of the CLI mode, forcing users to use interactive mode for basic operations.
 
+- **Directory Transformation Support** [#5]
+
+  SMV doesn't treat directories the same as files for transformations. Directories should be first-class objects that can be renamed using the same transformation options available for files.
+
+  Symptoms:
+  - Directory names aren't transformed when using options like `--snake` or `--kebab`
+  - Directories are primarily treated as containers, not objects that can be transformed themselves
+
+  Analysis:
+  The transformation functions need to be updated to process directory entries in the same way as file entries. Currently, the code focuses primarily on file operations, with directories serving mostly as containers.
+
+  Proposed fix:
+  - Update transformation functions to process both file and directory entries
+  - Ensure path-handling logic applies transformations to directory names
+  - Extend test cases to verify directory name transformations
+
+  Workaround:
+  - Explicitly specify directory names for renaming operations
+
+  Impact: Limits functionality and creates inconsistent user experience when working with both files and directories.
+
 ## Medium Priority Issues
 
 ### Transformers
-- **Kebab Case Transformation** [#2]
-  
-  Does not convert spaces to hyphens (e.g., "Dir Template.txt" becomes "dir template.txt" instead of "dir-template.txt")
-  
+
+- **CLI and Interactive Mode Syntax Inconsistency** [#6]
+
+  There's a significant syntax difference between CLI mode and interactive mode commands, creating a confusing user experience.
+
+  Symptoms:
+  - CLI: Uses flags like `--snake`, `--kebab`
+  - Interactive: Uses verbs like `snake`, `kebab`
+
   Analysis:
-  The issue is in the `kebab_case()` function in `src/transformers.rs`. Unlike the `title_case()` function that correctly processes spaces as word separators using `WORD_SEPARATORS_RE`, the kebab case implementation only replaces underscores with hyphens and doesn't handle spaces.
-  
-  Proposed fix:
-  ```rust
-  fn kebab_case(name: &str) -> String {
-      // First split by word separators (spaces, underscores, hyphens)
-      let words = WORD_SEPARATORS_RE
-          .split(name)
-          .filter(|s| !s.is_empty())
-          .collect::<Vec<&str>>();
-      
-      // Join with hyphens and convert to lowercase
-      words.join("-").to_lowercase()
-  }
-  ```
-  
-  Impact: Incorrect transformation output for a specific case type, undermining user expectations for kebab-case formatting.
+  The inconsistency stems from different parsing implementations:
+  - CLI mode uses the `clap` library with standard flags
+  - Interactive mode uses a simpler string parser with command verbs
+
+  Proposed solutions:
+  1. Make REPL use flag-style commands (more complex):
+     ```
+     smv> --snake *.txt  (instead of current: snake *.txt)
+     ```
+
+  2. Add verb-style aliases to CLI (easier):
+     ```
+     smv snake *.txt  (in addition to current: smv --snake *.txt)
+     ```
+
+  Workaround:
+  - Users must remember different syntax for each mode
+
+  Impact: Increases cognitive load and learning curve for users, reducing usability.
 
 ## Low Priority Issues
 
-- **Space Handling in Transformers** [#3]
-  
-  Need to review all case transformers for similar issues with space handling
-  
-  Impact: Potential inconsistencies in transformation outputs.
+*No active low priority issues*
 
 ## Fixed Issues
 
-*None recorded yet*
+### v0.3.0 Fixes
+
+- **✅ Kebab Case Transformation** [#2] 
+  
+  Fixed spaces not being converted to hyphens. Now "Dir Template.txt" correctly becomes "dir-template.txt".
+  
+  Resolution: Refactored all transformers to use shared tokenization logic with proper space handling.
+
+- **✅ Space Handling in Transformers** [#3]
+  
+  Fixed inconsistent space handling across all transformation types.
+  
+  Resolution: Implemented unified `tokenize()` function with `split_camel_case_word()` helper that properly handles spaces, camelCase, and edge cases like "XMLDocument" → "XML Document".
+
+- **✅ Directory Transformation Support** [#5]
+  
+  Added support for transforming directory names using the same transformation options as files.
+  
+  Resolution: Updated `build_file_list()` to include directories and modified path processing logic to handle both files and directories consistently.
+
+- **✅ Transformer Code Duplication** 
+  
+  Eliminated ~100 lines of duplicated preprocessing logic across transformation functions.
+  
+  Resolution: Created shared tokenization architecture with separate formatters (`format_snake()`, `format_kebab()`, etc.) that eliminate redundancy while improving maintainability.
+
+- **✅ Transform Mode Inference**
+  
+  Removed requirement for explicit `--transform` flag when using transformation types.
+  
+  Resolution: Modified argument parsing to automatically infer transform mode when any transformation flag (`--snake`, `--kebab`, etc.) is used, making the CLI more intuitive.
 
 ---
 
