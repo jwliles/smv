@@ -1,6 +1,6 @@
 [package]
 name = "smv"
-version = "0.1.2"
+version = "0.3.0"
 edition = "2021"
 authors = ["Justin Wayne Liles <jwliles@outlook.com>"]
 description = "Smart Move - An enhanced mv command with transformation capabilities"
@@ -27,6 +27,16 @@ once_cell = "1.18"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
+ratatui = "0.26.1"
+crossterm = "0.27.0"
+skim = "0.10.4"
+anyhow = "1.0"
+thiserror = "1.0"
+atty = "0.2"
+
+[dev-dependencies]
+tempfile = "3.8"
 
 [profile.release]
 opt-level = 3
