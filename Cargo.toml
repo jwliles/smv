@@ -1,6 +1,6 @@
 [package]
 name = "smv"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Justin Wayne Liles <jwliles@outlook.com>"]
 description = "Smart Move - An enhanced mv command with transformation capabilities"
@@ -33,6 +33,7 @@ crossterm = "0.27.0"
 skim = "0.10.4"
 anyhow = "1.0"
 thiserror = "1.0"
+atty = "0.2"
 
 [dev-dependencies]
 tempfile = "3.8"
