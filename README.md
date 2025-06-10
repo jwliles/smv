@@ -60,27 +60,43 @@ smv old_name.txt new_name.txt
 
 ```
 
-### Transformation Mode
+### New Command Structure
 
-<!-- Dev Note: What gets cleaned should be chosen by the user. We would show what the default celan command would do, and tehn allow the user to make any modifications to the clean command. -->
+SMV follows the LAR project command philosophy: `<tool> [scope] [targets] [modifiers]`
 
-Apply transformations to filenames:
+#### Interactive Guidance System
+
+SMV features an Excel-like command guidance system that shows available options as you type:
+
+```bash
+$ smv -snake . pdf
+[smv] [-snake] [. pdf] [preview|recursive|force]
+ cmd   scope    targets    modifiers (optional)
+```
+
+- **F1**: Get context-sensitive help for current position
+- **Tab**: Cycle through valid options
+- **Backspace**: Navigate to previous position
+
+#### Transformation Mode
+
+Apply transformations using the new sequential structure:
 
 ```bash
 # Convert filenames to snake_case
-smv --snake *.txt
+smv -snake . txt
 
 # Convert filenames to kebab-case with preview
-smv --preview --kebab *.pdf
+smv -kebab . pdf preview
 
 # Clean up spaces and special characters recursively
-smv --recursive --clean --directory /path/to/messy/files/
+smv -clean /path/to/messy/files/ recursive
 
 # Convert to Title Case for specific extensions
-smv --title --extensions "md,txt" documents/
+smv -title documents/ md txt
 
-# Combine transformations with standard move behavior
-smv --snake *.txt destination_folder/
+# Multiple file types with preview
+smv -pascal . pdf txt docx preview
 ```
 
 ### Directory Organization
@@ -89,39 +105,51 @@ Organize or flatten directory structures:
 
 ```bash
 # Group files by basename into directories
-smv --group /path/to/files/
+smv -group /path/to/files/
 
 # Preview grouping without making changes
-smv --preview --group /path/to/files/
+smv -group /path/to/files/ preview
 
-# Flatten all files from subdirectories into the root directory and remove empty directories
-smv --flatten /path/to/nested/folders/
+# Flatten all files from subdirectories into the root directory
+smv -flatten /path/to/nested/folders/
+
+# Sort files by type with grouping
+smv -sort downloads/ type group
 ```
 
 ### Interactive Modes
 
-#### REPL Interface
+#### AFN REPL Integration
 
-<!--Dev Note: We need to explain how to exit the REPL and interactive mode. Also let the user know when changes are saved or if they wil be lost upon exit.-->
+SMV is designed to work within the AFN REPL environment:
+
+```bash
+# Start AFN REPL
+$ afn
+AFN> smv -snake . pdf preview
+AFN> smv -pascal documents/ txt
+AFN> exit
+$
+```
+
+#### Standalone REPL Interface
 
 Launch the interactive REPL interface:
 
 ```bash
 # Start interactive session
-smv -i
-# or
-smv --interactive
+smv -interactive
 ```
 
-#### Terminal UI Mode (Coming Soon)
+Type `exit` to quit the REPL. All operations are saved to history automatically.
+
+#### Terminal UI Mode
 
 Launch the TUI file explorer with Vim-style navigation:
 
 ```bash
 # Start TUI mode
-smv -T
-# or
-smv --tui
+smv -tui
 ```
 
 The TUI mode features:
@@ -245,53 +273,47 @@ SMV will not overwrite existing files unless explicitly instructed to do so, pre
 
 See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and development priorities.
 
-## Roadmap
+## ROADMAP
 
-<!--Dev Note: We need to revist this ROADMAP since we have devauled the CLI to a secondary tool and pushed the interactive TUI to the main user interface. -->
+### Completed Features ✓
 
-### High Priority
+- **New Command Structure**: Implemented LAR project command philosophy
+- **Interactive Guidance System**: Excel-like command preview and help (designed)
+- **Sequential Command Parsing**: Position-based argument validation
+- **AFN REPL Integration**: Designed for use within AFN environment
+- **Simplified Syntax**: No more `--` clutter after scope declaration
 
+### High Priority Tasks
+
+- [ ] **Interactive Guidance Implementation**: Build the Excel-like command preview system
+- [ ] **F1 Help System**: Context-sensitive help for each command position
+- [ ] **Tab Completion**: Cycle through valid options at each position
+- [ ] **AFN Library Integration**: Extract shared command guidance into AFN library
 - [ ] **Fix CLI glob pattern handling**: Make CLI mode correctly handle glob patterns like `*.org`
-  ```bash
-  # Should work with glob patterns in CLI mode
-  smv --snake *.org
-  ```
-
 - [ ] **Fix kebab-case transformation**: Make kebab-case correctly convert spaces to hyphens
-  ```bash
-  # Should convert "Document Template.txt" to "document-template.txt"
-  smv --kebab "Document Template.txt"
-  ```
-
-- [ ] **Interactive mode with fuzzy search**: Integrate skim for fuzzy file selection
-  ```bash
-  # Launch interactive mode with fuzzy search capabilities
-  smv -i
-  # Then use fuzzy search to quickly find and select files
-  ```
 
 ### Future Enhancements
 
 - [ ] **Multi-step transformation pipelines**: Chain multiple transforms together
   ```bash
   # Example: Clean, convert to snake_case, then replace spaces with underscores
-  smv --transform "clean,snake,replace:space:_" file.txt
+  smv -pipeline "clean,snake,replace:space:_" file.txt
   ```
 
 - [ ] **Regular expression-based transformations**: Advanced pattern replacement
   ```bash
   # Example: Replace "old" with "new" in filenames
-  smv --replace "old:new" file.txt
+  smv -replace "old:new" file.txt
   # Example: Replace all digits with 'X'
-  smv --character-replace "digits:X" file*.txt
+  smv -char-replace "digits:X" file*.txt
   ```
 
 - [ ] **Custom user-defined transformations**: Save your own transform combinations
   ```bash
   # Example: Save a custom transformation
-  smv --save "my-format:clean,snake,upper"
+  smv -save "my-format:clean,snake,upper"
   # Use the custom transformation
-  smv --transform my-format file.txt
+  smv -custom my-format file.txt
   ```
 
 - [ ] **Configuration file system**: Persistent settings and defaults

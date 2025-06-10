@@ -6,11 +6,11 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::widgets::ListState;
 
 use crate::ui::terminal::{AppMode, KeyResult};
-use crate::ui::UiAction;
+use crate::ui::{UiAction, TransformAction};
 use skim::prelude::*;
 
 /// File information for display
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FileItem {
     /// File name
     pub name: String,
@@ -29,9 +29,9 @@ pub struct FileExplorer {
     /// Current directory
     current_dir: PathBuf,
     /// Files in the current directory
-    files: Vec<FileItem>,
+    pub files: Vec<FileItem>,
     /// List selection state
-    state: ListState,
+    pub state: ListState,
     /// Visual selection start
     visual_selection_start: Option<usize>,
     /// Current search pattern (if any)
@@ -258,6 +258,64 @@ impl FileExplorer {
                 KeyResult::Handled(None)
             }
 
+            // Transformation shortcuts
+            KeyCode::Char('s') => {
+                // Snake case transformation
+                if let Some(item) = self.selected() {
+                    if !item.is_dir {
+                        // Add to queue for snake_case transformation
+                        // This will be handled by the parent app
+                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Snake)));
+                    }
+                }
+                KeyResult::Handled(None)
+            }
+            KeyCode::Char('K') => {
+                // Kebab case transformation
+                if let Some(item) = self.selected() {
+                    if !item.is_dir {
+                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Kebab)));
+                    }
+                }
+                KeyResult::Handled(None)
+            }
+            KeyCode::Char('c') => {
+                // Clean transformation
+                if let Some(item) = self.selected() {
+                    if !item.is_dir {
+                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Clean)));
+                    }
+                }
+                KeyResult::Handled(None)
+            }
+            KeyCode::Char('t') => {
+                // Title case transformation
+                if let Some(item) = self.selected() {
+                    if !item.is_dir {
+                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Title)));
+                    }
+                }
+                KeyResult::Handled(None)
+            }
+            KeyCode::Char('o') => {
+                // Group files by basename (if current item is a directory)
+                if let Some(item) = self.selected() {
+                    if item.is_dir {
+                        return KeyResult::Handled(Some(UiAction::GroupFiles));
+                    }
+                }
+                KeyResult::Handled(None)
+            }
+            KeyCode::Char('O') => {
+                // Flatten directory (if current item is a directory)
+                if let Some(item) = self.selected() {
+                    if item.is_dir {
+                        return KeyResult::Handled(Some(UiAction::FlattenDirectory));
+                    }
+                }
+                KeyResult::Handled(None)
+            }
+
             // Actions
             KeyCode::Enter => {
                 // Select current file/directory
@@ -265,7 +323,8 @@ impl FileExplorer {
                     if item.is_dir {
                         let _ = self.change_directory(item.path.clone());
                     } else {
-                        // Process the file (add to queue, etc.)
+                        // Add file to operation queue
+                        return KeyResult::Handled(Some(UiAction::AddToQueue));
                     }
                 }
                 KeyResult::Handled(None)

@@ -28,4 +28,40 @@ pub enum UiAction {
     ExecuteQueue,
     /// Show help information
     ShowHelp,
+    /// Add file to operation queue
+    AddToQueue,
+    /// Transform the selected file
+    Transform(TransformAction),
+    /// Group files by basename
+    GroupFiles,
+    /// Flatten directory structure
+    FlattenDirectory,
+}
+
+/// Transform action for UI operations
+#[derive(Clone, Debug)]
+pub enum TransformAction {
+    Snake,
+    Kebab,
+    Clean,
+    Title,
+    Camel,
+    Pascal,
+    Lower,
+    Upper,
+}
+
+impl TransformAction {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TransformAction::Snake => "snake_case",
+            TransformAction::Kebab => "kebab-case",
+            TransformAction::Clean => "clean",
+            TransformAction::Title => "Title Case",
+            TransformAction::Camel => "camelCase",
+            TransformAction::Pascal => "PascalCase",
+            TransformAction::Lower => "lowercase",
+            TransformAction::Upper => "UPPERCASE",
+        }
+    }
 }

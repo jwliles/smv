@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use crate::transformers;
-use crate::ui::terminal::app::{FileOperation, TransformType};
+use crate::transformers::{self, TransformType};
+use crate::ui::terminal::app::FileOperation;
 
 /// Preview of file operations
 pub struct PreviewView {

@@ -25,13 +25,23 @@ impl Tui {
     /// Initialize a new terminal UI
     pub fn new() -> anyhow::Result<Self> {
         // Setup terminal
-        terminal::enable_raw_mode()?;
+        terminal::enable_raw_mode()
+            .map_err(|e| anyhow::anyhow!("Failed to enable raw mode: {}", e))?;
+        
         let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize terminal: {}", e))?;
 
         // Create terminal with crossterm backend
         let backend = CrosstermBackend::new(stdout);
-        let terminal = Terminal::new(backend)?;
+        let mut terminal = Terminal::new(backend)
+            .map_err(|e| anyhow::anyhow!("Failed to create terminal: {}", e))?;
+
+        // Clear the screen and hide cursor
+        terminal.clear()
+            .map_err(|e| anyhow::anyhow!("Failed to clear terminal: {}", e))?;
+        terminal.hide_cursor()
+            .map_err(|e| anyhow::anyhow!("Failed to hide cursor: {}", e))?;
 
         // Create Tui instance
         let tick_rate = Duration::from_millis(100);
@@ -45,14 +55,17 @@ impl Tui {
 
     /// Restore terminal state on drop
     fn restore_terminal(&mut self) -> anyhow::Result<()> {
-        // Restore terminal
+        // Restore cursor and clear screen
+        self.terminal.show_cursor()?;
+        self.terminal.clear()?;
+        
+        // Restore terminal state
         terminal::disable_raw_mode()?;
         execute!(
             self.terminal.backend_mut(),
             LeaveAlternateScreen,
             DisableMouseCapture
         )?;
-        self.terminal.show_cursor()?;
 
         Ok(())
     }
@@ -79,10 +92,9 @@ impl Tui {
     /// Draw the terminal UI with the provided render function
     pub fn draw<F>(&mut self, render_fn: F) -> anyhow::Result<()>
     where
-        F: FnOnce(&mut ratatui::Frame<'_>) -> anyhow::Result<()>,
+        F: FnOnce(&mut ratatui::Frame<'_>),
     {
-        self.terminal
-            .draw(|frame| render_fn(frame).expect("Failed to render"))?;
+        self.terminal.draw(render_fn)?;
         Ok(())
     }
 
@@ -117,5 +129,12 @@ impl Tui {
                 self.next_event()
             }
         }
+    }
+}
+
+impl Drop for Tui {
+    fn drop(&mut self) {
+        // Ensure cleanup on drop
+        let _ = self.restore_terminal();
     }
 }
