@@ -12,7 +12,7 @@ use regex::Regex;
 /// - `Pascal`: Converts to PascalCase (no separators, all words capitalized)
 /// - `Lower`: Converts to all lowercase
 /// - `Upper`: Converts to all uppercase
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransformType {
     /// Removes special characters and normalizes spaces
     Clean,
@@ -84,11 +84,8 @@ static SPECIAL_CHARS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^\w\s.-]").unw
 static MULTIPLE_SPACES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
 static LEADING_TRAILING_SPECIALS_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[-\s.]+|[-\s.]+$").unwrap());
-static UPPERCASE_FOLLOWED_BY_LOWERCASE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"([A-Z]+)([A-Z][a-z])").unwrap());
-static LOWERCASE_FOLLOWED_BY_UPPERCASE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"([a-z\d])([A-Z])").unwrap());
 static WORD_SEPARATORS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s_-]+").unwrap());
+static WORD_SEPARATORS_WITH_DOTS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s_.-]+").unwrap());
 
 /// Transform a filename according to the specified transformation type
 ///
@@ -149,15 +146,8 @@ fn clean(name: &str) -> String {
 /// # Returns
 /// A new string in snake_case format
 fn snake_case(name: &str) -> String {
-    let with_slashes = name.replace("::", "/");
-    let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1_$2");
-    let second_transform =
-        LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1_$2");
-    let with_underscores = second_transform.replace('-', "_");
-    WORD_SEPARATORS_RE
-        .replace_all(&with_underscores, "_")
-        .to_string()
-        .to_lowercase()
+    let tokens = tokenize(name, false);
+    format_snake(&tokens)
 }
 
 /// Convert a filename to kebab-case
@@ -173,15 +163,8 @@ fn snake_case(name: &str) -> String {
 /// # Returns
 /// A new string in kebab-case format
 fn kebab_case(name: &str) -> String {
-    let with_slashes = name.replace("::", "/");
-    let first_transform = UPPERCASE_FOLLOWED_BY_LOWERCASE_RE.replace_all(&with_slashes, "$1-$2");
-    let second_transform =
-        LOWERCASE_FOLLOWED_BY_UPPERCASE_RE.replace_all(&first_transform, "$1-$2");
-    let with_hyphens = second_transform.replace('_', "-");
-    WORD_SEPARATORS_RE
-        .replace_all(&with_hyphens, "-")
-        .to_string()
-        .to_lowercase()
+    let tokens = tokenize(name, false);
+    format_kebab(&tokens)
 }
 
 /// Convert a filename to Title Case
@@ -197,12 +180,8 @@ fn kebab_case(name: &str) -> String {
 /// # Returns
 /// A new string in Title Case format
 fn title_case(name: &str) -> String {
-    WORD_SEPARATORS_RE
-        .split(name)
-        .filter(|s| !s.is_empty())
-        .map(capitalize_first)
-        .collect::<Vec<String>>()
-        .join(" ")
+    let tokens = tokenize(name, true);
+    format_title(&tokens)
 }
 
 /// Convert a filename to camelCase
@@ -219,21 +198,8 @@ fn title_case(name: &str) -> String {
 /// # Returns
 /// A new string in camelCase format
 fn camel_case(name: &str) -> String {
-    let words = WORD_SEPARATORS_RE
-        .split(name)
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<&str>>();
-
-    if words.is_empty() {
-        return String::new();
-    }
-
-    let mut result = words[0].to_lowercase();
-    for word in words.iter().skip(1) {
-        result.push_str(&capitalize_first(word));
-    }
-
-    result
+    let tokens = tokenize(name, true);
+    format_camel(&tokens)
 }
 
 /// Convert a filename to PascalCase
@@ -249,12 +215,90 @@ fn camel_case(name: &str) -> String {
 /// # Returns
 /// A new string in PascalCase format
 fn pascal_case(name: &str) -> String {
-    WORD_SEPARATORS_RE
+    let tokens = tokenize(name, true);
+    format_pascal(&tokens)
+}
+
+/// Tokenize a string into constituent words, handling all separators and camelCase
+fn tokenize(name: &str, include_dots: bool) -> Vec<String> {
+    let separator_regex = if include_dots {
+        &WORD_SEPARATORS_WITH_DOTS_RE
+    } else {
+        &WORD_SEPARATORS_RE
+    };
+    
+    separator_regex
         .split(name)
         .filter(|s| !s.is_empty())
-        .map(capitalize_first)
+        .flat_map(|word| split_camel_case_word(word))
+        .collect()
+}
+
+/// Helper function to split a word into constituent words, handling camelCase
+fn split_camel_case_word(word: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current_word = String::new();
+    let chars: Vec<char> = word.chars().collect();
+    
+    for (i, &ch) in chars.iter().enumerate() {
+        if ch.is_uppercase() && i > 0 && (
+            // Previous char is lowercase or digit
+            chars[i-1].is_lowercase() || chars[i-1].is_ascii_digit() ||
+            // Current char is followed by lowercase (handles XMLDocument -> XML Document)
+            (i + 1 < chars.len() && chars[i+1].is_lowercase())
+        ) {
+            if !current_word.is_empty() {
+                result.push(current_word.clone());
+                current_word.clear();
+            }
+        }
+        current_word.push(ch);
+    }
+    
+    if !current_word.is_empty() {
+        result.push(current_word);
+    }
+    
+    result
+}
+
+/// Format tokens as snake_case
+fn format_snake(tokens: &[String]) -> String {
+    tokens.join("_").replace('-', "_").to_lowercase()
+}
+
+/// Format tokens as kebab-case
+fn format_kebab(tokens: &[String]) -> String {
+    tokens.join("-").replace('_', "-").to_lowercase()
+}
+
+/// Format tokens as camelCase
+fn format_camel(tokens: &[String]) -> String {
+    if tokens.is_empty() {
+        return String::new();
+    }
+    
+    let mut result = tokens[0].to_lowercase();
+    for token in tokens.iter().skip(1) {
+        result.push_str(&capitalize_first(token));
+    }
+    result
+}
+
+/// Format tokens as PascalCase
+fn format_pascal(tokens: &[String]) -> String {
+    tokens.iter()
+        .map(|token| capitalize_first(token))
         .collect::<Vec<String>>()
         .join("")
+}
+
+/// Format tokens as Title Case
+fn format_title(tokens: &[String]) -> String {
+    tokens.iter()
+        .map(|token| capitalize_first(token))
+        .collect::<Vec<String>>()
+        .join(" ")
 }
 
 /// Helper function to capitalize the first letter of a string
@@ -305,6 +349,8 @@ mod tests {
             kebab_case("Mix-of spaces_and_underscores"),
             "mix-of-spaces-and-underscores"
         );
+        // Test the specific bug case from BUGS.md
+        assert_eq!(kebab_case("Dir Template.txt"), "dir-template.txt");
     }
 
     #[test]
