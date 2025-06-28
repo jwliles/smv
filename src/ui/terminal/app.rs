@@ -351,7 +351,7 @@ impl App {
         let filename = file.path.file_name()
             .ok_or_else(|| anyhow::anyhow!("Invalid filename"))?
             .to_string_lossy();
-        let new_filename = transform(&filename, transform_type);
+        let new_filename = transform(&filename, &transform_type);
         
         // Create new path with transformed filename
         let new_path = file.path.parent()

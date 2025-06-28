@@ -65,28 +65,34 @@ impl PreviewView {
     pub fn preview_transform(&self, filename: &str, transform_type: TransformType) -> String {
         match transform_type {
             TransformType::Snake => {
-                transformers::transform(filename, transformers::TransformType::Snake)
+                transformers::transform(filename, &transformers::TransformType::Snake)
             }
             TransformType::Kebab => {
-                transformers::transform(filename, transformers::TransformType::Kebab)
+                transformers::transform(filename, &transformers::TransformType::Kebab)
             }
             TransformType::Title => {
-                transformers::transform(filename, transformers::TransformType::Title)
+                transformers::transform(filename, &transformers::TransformType::Title)
             }
             TransformType::Camel => {
-                transformers::transform(filename, transformers::TransformType::Camel)
+                transformers::transform(filename, &transformers::TransformType::Camel)
             }
             TransformType::Pascal => {
-                transformers::transform(filename, transformers::TransformType::Pascal)
+                transformers::transform(filename, &transformers::TransformType::Pascal)
             }
             TransformType::Lower => {
-                transformers::transform(filename, transformers::TransformType::Lower)
+                transformers::transform(filename, &transformers::TransformType::Lower)
             }
             TransformType::Upper => {
-                transformers::transform(filename, transformers::TransformType::Upper)
+                transformers::transform(filename, &transformers::TransformType::Upper)
             }
             TransformType::Clean => {
-                transformers::transform(filename, transformers::TransformType::Clean)
+                transformers::transform(filename, &transformers::TransformType::Clean)
+            }
+            TransformType::Replace(find, replace) => {
+                transformers::transform(filename, &transformers::TransformType::Replace(find.clone(), replace.clone()))
+            }
+            TransformType::ReplaceRegex(pattern, replacement) => {
+                transformers::transform(filename, &transformers::TransformType::ReplaceRegex(pattern.clone(), replacement.clone()))
             }
         }
     }

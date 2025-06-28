@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+use deunicode::deunicode;
 
 /// Transformation types available for filename conversion
 ///
@@ -12,7 +13,7 @@ use regex::Regex;
 /// - `Pascal`: Converts to PascalCase (no separators, all words capitalized)
 /// - `Lower`: Converts to all lowercase
 /// - `Upper`: Converts to all uppercase
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TransformType {
     /// Removes special characters and normalizes spaces
     Clean,
@@ -30,6 +31,10 @@ pub enum TransformType {
     Lower,
     /// Converts to all uppercase
     Upper,
+    /// Replace substring (find, replace)
+    Replace(String, String),
+    /// Replace using regex pattern (pattern, replacement)
+    ReplaceRegex(String, String),
 }
 
 impl TransformType {
@@ -58,6 +63,16 @@ impl TransformType {
         }
     }
 
+    /// Create a Replace transformation from find and replace strings
+    pub fn replace(find: &str, replace: &str) -> Self {
+        TransformType::Replace(find.to_string(), replace.to_string())
+    }
+
+    /// Create a ReplaceRegex transformation from pattern and replacement strings
+    pub fn replace_regex(pattern: &str, replacement: &str) -> Self {
+        TransformType::ReplaceRegex(pattern.to_string(), replacement.to_string())
+    }
+
     /// Get string representation of the transform type
     ///
     /// This method returns the string representation of a TransformType.
@@ -65,16 +80,18 @@ impl TransformType {
     ///
     /// # Returns
     /// A string representing the transformation type
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> String {
         match self {
-            TransformType::Clean => "clean",
-            TransformType::Snake => "snake",
-            TransformType::Kebab => "kebab",
-            TransformType::Title => "title",
-            TransformType::Camel => "camel",
-            TransformType::Pascal => "pascal",
-            TransformType::Lower => "lower",
-            TransformType::Upper => "upper",
+            TransformType::Clean => "clean".to_string(),
+            TransformType::Snake => "snake".to_string(),
+            TransformType::Kebab => "kebab".to_string(),
+            TransformType::Title => "title".to_string(),
+            TransformType::Camel => "camel".to_string(),
+            TransformType::Pascal => "pascal".to_string(),
+            TransformType::Lower => "lower".to_string(),
+            TransformType::Upper => "upper".to_string(),
+            TransformType::Replace(find, replace) => format!("replace({} → {})", find, replace),
+            TransformType::ReplaceRegex(pattern, replacement) => format!("replace-regex({} → {})", pattern, replacement),
         }
     }
 }
@@ -84,13 +101,14 @@ static SPECIAL_CHARS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^\w\s.-]").unw
 static MULTIPLE_SPACES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
 static LEADING_TRAILING_SPECIALS_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[-\s.]+|[-\s.]+$").unwrap());
-static WORD_SEPARATORS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s_-]+").unwrap());
+static WORD_SEPARATORS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s_.-]+").unwrap());
 static WORD_SEPARATORS_WITH_DOTS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s_.-]+").unwrap());
 
 /// Transform a filename according to the specified transformation type
 ///
 /// This is the main public function for transforming filenames. It dispatches
 /// to the appropriate transformation function based on the specified transformation type.
+/// It preserves file extensions for case transformations.
 ///
 /// # Arguments
 /// * `name` - The filename string to transform
@@ -98,16 +116,18 @@ static WORD_SEPARATORS_WITH_DOTS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\s
 ///
 /// # Returns
 /// A new string transformed according to the specified transformation type
-pub fn transform(name: &str, transform_type: TransformType) -> String {
+pub fn transform(name: &str, transform_type: &TransformType) -> String {
     match transform_type {
         TransformType::Clean => clean(name),
-        TransformType::Snake => snake_case(name),
-        TransformType::Kebab => kebab_case(name),
-        TransformType::Title => title_case(name),
-        TransformType::Camel => camel_case(name),
-        TransformType::Pascal => pascal_case(name),
+        TransformType::Snake => snake_case_preserve_extension(name),
+        TransformType::Kebab => kebab_case_preserve_extension(name),
+        TransformType::Title => title_case_preserve_extension(name),
+        TransformType::Camel => camel_case_preserve_extension(name),
+        TransformType::Pascal => pascal_case_preserve_extension(name),
         TransformType::Lower => name.to_lowercase(),
         TransformType::Upper => name.to_uppercase(),
+        TransformType::Replace(find, replace) => replace_substring(name, find, replace),
+        TransformType::ReplaceRegex(pattern, replacement) => replace_regex(name, pattern, replacement),
     }
 }
 
@@ -150,6 +170,25 @@ fn snake_case(name: &str) -> String {
     format_snake(&tokens)
 }
 
+/// Convert a filename to snake_case while preserving the file extension
+fn snake_case_preserve_extension(name: &str) -> String {
+    if let Some(dot_pos) = name.rfind('.') {
+        if dot_pos > 0 && dot_pos < name.len() - 1 {
+            // File has an extension
+            let (basename, extension) = name.split_at(dot_pos);
+            let transformed_basename = snake_case(basename);
+            let transformed_extension = extension[1..].to_lowercase(); // Remove the dot and lowercase extension
+            format!("{}.{}", transformed_basename, transformed_extension)
+        } else {
+            // Dot at beginning or end, treat as regular filename
+            snake_case(name)
+        }
+    } else {
+        // No extension
+        snake_case(name)
+    }
+}
+
 /// Convert a filename to kebab-case
 ///
 /// This function handles conversion of a string to kebab-case by:
@@ -167,6 +206,33 @@ fn kebab_case(name: &str) -> String {
     format_kebab(&tokens)
 }
 
+/// Convert a filename to kebab-case while preserving the file extension
+fn kebab_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, kebab_case)
+}
+
+/// Helper function to apply a transformation while preserving file extension
+fn preserve_extension_transform<F>(name: &str, transform_fn: F) -> String 
+where 
+    F: Fn(&str) -> String,
+{
+    if let Some(dot_pos) = name.rfind('.') {
+        if dot_pos > 0 && dot_pos < name.len() - 1 {
+            // File has an extension
+            let (basename, extension) = name.split_at(dot_pos);
+            let transformed_basename = transform_fn(basename);
+            let transformed_extension = extension[1..].to_lowercase(); // Remove the dot and lowercase extension
+            format!("{}.{}", transformed_basename, transformed_extension)
+        } else {
+            // Dot at beginning or end, treat as regular filename
+            transform_fn(name)
+        }
+    } else {
+        // No extension
+        transform_fn(name)
+    }
+}
+
 /// Convert a filename to Title Case
 ///
 /// This function handles conversion of a string to Title Case by:
@@ -182,6 +248,11 @@ fn kebab_case(name: &str) -> String {
 fn title_case(name: &str) -> String {
     let tokens = tokenize(name, true);
     format_title(&tokens)
+}
+
+/// Convert a filename to Title Case while preserving the file extension
+fn title_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, title_case)
 }
 
 /// Convert a filename to camelCase
@@ -202,6 +273,11 @@ fn camel_case(name: &str) -> String {
     format_camel(&tokens)
 }
 
+/// Convert a filename to camelCase while preserving the file extension
+fn camel_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, camel_case)
+}
+
 /// Convert a filename to PascalCase
 ///
 /// This function handles conversion of a string to PascalCase by:
@@ -219,8 +295,16 @@ fn pascal_case(name: &str) -> String {
     format_pascal(&tokens)
 }
 
+/// Convert a filename to PascalCase while preserving the file extension
+fn pascal_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, pascal_case)
+}
+
 /// Tokenize a string into constituent words, handling all separators and camelCase
 fn tokenize(name: &str, include_dots: bool) -> Vec<String> {
+    // Apply unicode normalization first
+    let normalized = deunicode(name);
+    
     let separator_regex = if include_dots {
         &WORD_SEPARATORS_WITH_DOTS_RE
     } else {
@@ -228,7 +312,7 @@ fn tokenize(name: &str, include_dots: bool) -> Vec<String> {
     };
     
     separator_regex
-        .split(name)
+        .split(&normalized)
         .filter(|s| !s.is_empty())
         .flat_map(|word| split_camel_case_word(word))
         .collect()
@@ -316,6 +400,44 @@ fn capitalize_first(s: &str) -> String {
     }
 }
 
+/// Replace substring in a filename
+///
+/// This function performs exact string replacement on the filename.
+/// It replaces all occurrences of the find string with the replace string.
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+/// * `find` - The substring to find
+/// * `replace` - The substring to replace with
+///
+/// # Returns
+/// A new string with all occurrences of `find` replaced with `replace`
+fn replace_substring(name: &str, find: &str, replace: &str) -> String {
+    name.replace(find, replace)
+}
+
+/// Replace using regex pattern in a filename
+///
+/// This function performs regex-based replacement on the filename.
+/// It replaces all matches of the regex pattern with the replacement string.
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+/// * `pattern` - The regex pattern to match
+/// * `replacement` - The replacement string (can include capture groups like $1, $2)
+///
+/// # Returns
+/// A new string with all pattern matches replaced, or the original string if regex is invalid
+fn replace_regex(name: &str, pattern: &str, replacement: &str) -> String {
+    match Regex::new(pattern) {
+        Ok(re) => re.replace_all(name, replacement).to_string(),
+        Err(_) => {
+            eprintln!("Warning: Invalid regex pattern '{}', returning original string", pattern);
+            name.to_string()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -330,27 +452,35 @@ mod tests {
     #[test]
     fn test_snake_case() {
         assert_eq!(snake_case("HelloWorld"), "hello_world");
-        assert_eq!(snake_case("My-File.txt"), "my_file.txt");
+        assert_eq!(snake_case("My-File.txt"), "my_file_txt"); // No extension preservation in direct function
         assert_eq!(snake_case("already_snake"), "already_snake");
         assert_eq!(snake_case("Words With Spaces"), "words_with_spaces");
         assert_eq!(
             snake_case("Mix-of spaces_and-hyphens"),
             "mix_of_spaces_and_hyphens"
         );
+        
+        // Test the extension-preserving version
+        assert_eq!(snake_case_preserve_extension("My-File.txt"), "my_file.txt");
+        assert_eq!(snake_case_preserve_extension("HelloWorld.pdf"), "hello_world.pdf");
     }
 
     #[test]
     fn test_kebab_case() {
         assert_eq!(kebab_case("HelloWorld"), "hello-world");
-        assert_eq!(kebab_case("My_File.txt"), "my-file.txt");
+        assert_eq!(kebab_case("My_File.txt"), "my-file-txt"); // No extension preservation in direct function
         assert_eq!(kebab_case("already-kebab"), "already-kebab");
         assert_eq!(kebab_case("Words With Spaces"), "words-with-spaces");
         assert_eq!(
             kebab_case("Mix-of spaces_and_underscores"),
             "mix-of-spaces-and-underscores"
         );
-        // Test the specific bug case from BUGS.md
-        assert_eq!(kebab_case("Dir Template.txt"), "dir-template.txt");
+        // Test the specific bug case from BUGS.md - no extension preservation in direct function
+        assert_eq!(kebab_case("Dir Template.txt"), "dir-template-txt");
+        
+        // Test the extension-preserving version
+        assert_eq!(kebab_case_preserve_extension("My_File.txt"), "my-file.txt");
+        assert_eq!(kebab_case_preserve_extension("Dir Template.txt"), "dir-template.txt");
     }
 
     #[test]
@@ -374,5 +504,32 @@ mod tests {
         assert_eq!(pascal_case("my-file.txt"), "MyFileTxt");
         assert_eq!(pascal_case("Words With Spaces"), "WordsWithSpaces");
         assert_eq!(pascal_case("multiple   spaces"), "MultipleSpaces");
+    }
+
+    #[test]
+    fn test_replace_substring() {
+        assert_eq!(replace_substring("hello_world.txt", "hello", "hi"), "hi_world.txt");
+        assert_eq!(replace_substring("AFN_project.rs", "AFN", "CNP"), "CNP_project.rs");
+        assert_eq!(replace_substring("test_AFN_file.txt", "AFN", "CNP"), "test_CNP_file.txt");
+        assert_eq!(replace_substring("no_match.txt", "xyz", "abc"), "no_match.txt");
+        assert_eq!(replace_substring("multiple_AFN_AFN.txt", "AFN", "CNP"), "multiple_CNP_CNP.txt");
+    }
+
+    #[test]
+    fn test_replace_regex() {
+        assert_eq!(replace_regex("file123.txt", r"\d+", "456"), "file456.txt");
+        assert_eq!(replace_regex("AFN_project_v1.rs", r"AFN", "CNP"), "CNP_project_v1.rs");
+        assert_eq!(replace_regex("test_file_2023.txt", r"\d{4}", "2024"), "test_file_2024.txt");
+        assert_eq!(replace_regex("CamelCase.txt", r"([A-Z])", "_$1"), "_Camel_Case.txt");
+        assert_eq!(replace_regex("invalid[regex.txt", r"[", "replacement"), "invalid[regex.txt");
+    }
+
+    #[test]
+    fn test_transform_replace() {
+        let replace_transform = TransformType::Replace("AFN".to_string(), "CNP".to_string());
+        assert_eq!(transform("AFN_project.rs", &replace_transform), "CNP_project.rs");
+        
+        let regex_transform = TransformType::ReplaceRegex(r"\d+".to_string(), "XXX".to_string());
+        assert_eq!(transform("file123.txt", &regex_transform), "fileXXX.txt");
     }
 }

@@ -25,139 +25,91 @@ use ui::UserInterface;
 #[command(
     author,
     version,
-    about = "Smart Move - An enhanced mv command with transformation capabilities",
-    long_about = "Command Philosophy: <tool> [scope] [targets] [modifiers]
+    about = "Smart Move - Enhanced file operations with XFD syntax",
+    long_about = "CNP Smart Move Tool - XFD (eXtended Flag Definition) Syntax
 
-SCOPE (choose one primary operation):
-  -transform      Transform filenames (optional - inferred from transformation flags)
-  -move           Move/rename files (standard mv operation) 
-  -sort           Sort and organize files (with -group/-flatten/-by-type/-by-date/-by-size)
-  -interactive    Launch interactive REPL interface
-  -tui            Launch terminal UI file explorer
-  -undo           Undo the last operation
+SYNTAX:
+  smv [COMMAND] [OPTIONS] [TARGET] [FLAGS]
+  smv CHANGE \"old\" INTO \"new\" [target] [flags]
+  smv [transform] [target] [flags]
+  smv [operation] [target] [flags]
+
+COMMANDS:
+  CHANGE \"old\" INTO \"new\"  Replace substring in filenames
+  REGEX \"pattern\" INTO \"replacement\"  Replace using regex pattern
+  snake, kebab, pascal, camel, title, lower, upper, clean  Transform filename case/format
+  sort, group, flatten  Organize files
+  interactive, tui, undo  Special modes
+
+FLAGS (stackable):
+  -r  Recursive (process subdirectories)
+  -p  Preview (show changes without applying)
+  -f  Force (skip confirmations)
+  -i  Interactive mode
+  -T  Terminal UI mode
+  -u  Undo last operation
 
 EXAMPLES:
-  smv --pascal . md --preview
-  smv --snake . txt pdf
-  smv --sort --group downloads/ --preview
-  smv --move backup/ . log
-  smv --interactive
-  smv --tui"
+  smv CHANGE \"AFN\" INTO \"CNP\" . -rp
+  smv REGEX \"\\\\d+\" INTO \"XXX\" . -r
+  smv pascal . -p
+  smv sort . -rf
+  smv -i"
 )]
 struct Args {
-    // === SCOPE/MODE (primary operation) ===
-    /// [SCOPE] Transform filenames using specified transformation type
-    #[arg(long, action = ArgAction::SetTrue, group = "scope")]
-    transform: bool,
+    // === XFD COMMAND SYNTAX ===
+    /// Main command or transformation type
+    #[arg(value_name = "COMMAND")]
+    command: Option<String>,
 
-    /// [SCOPE] Move/rename files (standard mv operation)
-    #[arg(long, action = ArgAction::SetTrue, group = "scope")]
-    move_files: bool,
+    /// First argument (for CHANGE command: the old string)
+    #[arg(value_name = "ARG1")]
+    arg1: Option<String>,
 
-    /// [SCOPE] Sort and organize files by type, date, or other criteria
-    #[arg(long, action = ArgAction::SetTrue, group = "scope")]
-    sort: bool,
+    /// INTO keyword (for CHANGE/REGEX commands)
+    #[arg(value_name = "INTO")]
+    into_keyword: Option<String>,
 
-    /// [SCOPE] Interactive mode - launch REPL interface
-    #[arg(short, long, action = ArgAction::SetTrue, group = "scope")]
-    interactive: bool,
+    /// Second argument (for CHANGE command: the new string)
+    #[arg(value_name = "ARG2")]
+    arg2: Option<String>,
 
-    /// [SCOPE] Terminal UI mode - launch the TUI file explorer
-    #[arg(short = 'T', long = "tui", action = ArgAction::SetTrue, group = "scope")]
-    tui: bool,
+    /// Target directory or file pattern
+    #[arg(value_name = "TARGET")]
+    target: Option<String>,
 
-    /// [SCOPE] Undo the last operation
-    #[arg(long, action = ArgAction::SetTrue, group = "scope")]
-    undo: bool,
+    /// Additional file extensions or patterns
+    #[arg(value_name = "EXTENSIONS")]
+    extensions: Vec<String>,
 
-    // === TRANSFORMATION TYPES (choose one - automatically enables transform mode) ===
-    /// [TRANSFORM] Convert to snake_case
-    #[arg(long, action = ArgAction::SetTrue)]
-    snake: bool,
-
-    /// [TRANSFORM] Convert to kebab-case
-    #[arg(long, action = ArgAction::SetTrue)]
-    kebab: bool,
-
-    /// [TRANSFORM] Convert to PascalCase
-    #[arg(long, action = ArgAction::SetTrue)]
-    pascal: bool,
-
-    /// [TRANSFORM] Convert to camelCase
-    #[arg(long, action = ArgAction::SetTrue)]
-    camel: bool,
-
-    /// [TRANSFORM] Convert to Title Case
-    #[arg(long, action = ArgAction::SetTrue)]
-    title: bool,
-
-    /// [TRANSFORM] Convert to lowercase
-    #[arg(long, action = ArgAction::SetTrue)]
-    lower: bool,
-
-    /// [TRANSFORM] Convert to UPPERCASE
-    #[arg(long, action = ArgAction::SetTrue)]
-    upper: bool,
-
-    /// [TRANSFORM] Clean filenames (remove special chars)
-    #[arg(long, action = ArgAction::SetTrue)]
-    clean: bool,
-
-    // === SORT CRITERIA (for --sort scope) ===
-    /// [SORT OPTION] Sort by file type (extension)
-    #[arg(long, action = ArgAction::SetTrue, requires = "sort")]
-    by_type: bool,
-
-    /// [SORT OPTION] Sort by modification date
-    #[arg(long, action = ArgAction::SetTrue, requires = "sort")]
-    by_date: bool,
-
-    /// [SORT OPTION] Sort by file size
-    #[arg(long, action = ArgAction::SetTrue, requires = "sort")]
-    by_size: bool,
-
-    /// [SORT OPTION] Group files by basename into directories
-    #[arg(long, action = ArgAction::SetTrue, requires = "sort")]
-    group: bool,
-
-    /// [SORT OPTION] Flatten directory structure
-    #[arg(long, action = ArgAction::SetTrue, requires = "sort")]
-    flatten: bool,
-
-    // === MODIFIERS ===
-    /// [MODIFIER] Preview changes without applying them
-    #[arg(short, long, action = ArgAction::SetTrue)]
-    preview: bool,
-
-    /// [MODIFIER] Process subdirectories recursively
-    #[arg(short, long, action = ArgAction::SetTrue)]
+    // === XFD FLAGS (single character, stackable) ===
+    /// Stackable flags: r(ecursive), p(review), f(orce), i(nteractive), T(ui), u(ndo)
+    #[arg(short = 'r', action = ArgAction::SetTrue, help = "Recursive - process subdirectories")]
     recursive: bool,
 
-    /// [MODIFIER] Force operation without confirmation
-    #[arg(short, long, action = ArgAction::SetTrue)]
+    #[arg(short = 'p', action = ArgAction::SetTrue, help = "Preview - show changes without applying")]
+    preview: bool,
+
+    #[arg(short = 'f', action = ArgAction::SetTrue, help = "Force - skip confirmations")]
     force: bool,
 
-    /// [MODIFIER] Comma-separated patterns to exclude (e.g., "*.tmp,test_*")
+    #[arg(short = 'i', action = ArgAction::SetTrue, help = "Interactive - launch REPL interface")]
+    interactive: bool,
+
+    #[arg(short = 'T', action = ArgAction::SetTrue, help = "TUI - launch terminal UI file explorer")]
+    tui: bool,
+
+    #[arg(short = 'u', action = ArgAction::SetTrue, help = "Undo - reverse last operation")]
+    undo: bool,
+
+    // === LEGACY SUPPORT ===
+    /// Comma-separated patterns to exclude (e.g., "*.tmp,test_*")
     #[arg(long, value_name = "PATTERNS")]
     exclude: Option<String>,
 
     /// Maximum number of operations to keep in history
     #[arg(long, value_name = "SIZE", default_value = "50")]
     max_history_size: usize,
-
-    // === TARGETS ===
-    /// [TARGET] Source directory (use '.' for current directory)
-    #[arg(value_name = "DIRECTORY")]
-    directory: Option<String>,
-
-    /// [TARGET] File extensions to process (e.g., 'pdf', 'txt', 'jpg')
-    #[arg(value_name = "EXTENSIONS")]
-    extensions: Vec<String>,
-
-    // === LEGACY SUPPORT ===
-    /// Destination for move operations (when using legacy syntax)
-    #[arg(long, value_name = "DESTINATION")]
-    destination: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -171,50 +123,107 @@ struct Stats {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    // Handle scope/mode operations
-    match determine_operation_mode(&args) {
-        OperationMode::Transform => run_transform_mode(&args)?,
-        OperationMode::Move => run_move_mode(&args)?,
-        OperationMode::Sort => run_sort_mode(&args)?,
-        OperationMode::Interactive => run_interactive_mode(args.max_history_size)?,
-        OperationMode::Tui => run_tui_mode()?,
-        OperationMode::Undo => run_undo_mode(args.max_history_size)?,
-        OperationMode::None => {
-            eprintln!("Error: No operation mode specified.");
-            eprintln!("Use one of: --transform, --move, --sort, --interactive, --tui, or --undo");
+    // Parse XFD command
+    let command = match parse_xfd_command(&args) {
+        Ok(cmd) => cmd,
+        Err(e) => {
+            eprintln!("Error: {}", e);
             eprintln!("For help: smv --help");
             process::exit(1);
         }
+    };
+
+    // Execute command
+    match command {
+        XfdCommand::Change { old, new } => {
+            let transform_type = TransformType::replace(&old, &new);
+            run_transform_command(&args, transform_type)?
+        },
+        XfdCommand::Regex { pattern, replacement } => {
+            let transform_type = TransformType::replace_regex(&pattern, &replacement);
+            run_transform_command(&args, transform_type)?
+        },
+        XfdCommand::Transform(transform_type) => {
+            run_transform_command(&args, transform_type)?
+        },
+        XfdCommand::Sort { method } => {
+            run_sort_command(&args, method)?
+        },
+        XfdCommand::Interactive => run_interactive_mode(args.max_history_size)?,
+        XfdCommand::Tui => run_tui_mode()?,
+        XfdCommand::Undo => run_undo_mode(args.max_history_size)?,
     }
 
     Ok(())
 }
 
-#[derive(Debug)]
-enum OperationMode {
-    Transform,
-    Move,
-    Sort,
+#[derive(Debug, Clone)]
+enum XfdCommand {
+    Change { old: String, new: String },
+    Regex { pattern: String, replacement: String },
+    Transform(TransformType),
+    Sort { method: SortMethod },
     Interactive,
     Tui,
     Undo,
-    None,
 }
 
-fn determine_operation_mode(args: &Args) -> OperationMode {
-    // Check for explicit mode flags first
-    if args.transform { OperationMode::Transform }
-    else if args.move_files { OperationMode::Move }
-    else if args.sort { OperationMode::Sort }
-    else if args.interactive { OperationMode::Interactive }
-    else if args.tui { OperationMode::Tui }
-    else if args.undo { OperationMode::Undo }
-    // Infer transform mode if any transformation flag is used
-    else if args.snake || args.kebab || args.pascal || args.camel || 
-            args.title || args.lower || args.upper || args.clean {
-        OperationMode::Transform
+#[derive(Debug, Clone)]
+enum SortMethod {
+    Group,
+    Flatten,
+    ByType,
+    ByDate,
+    BySize,
+}
+
+fn parse_xfd_command(args: &Args) -> Result<XfdCommand, Box<dyn Error>> {
+    // Check for flags first (highest priority)
+    if args.interactive {
+        return Ok(XfdCommand::Interactive);
     }
-    else { OperationMode::None }
+    if args.tui {
+        return Ok(XfdCommand::Tui);
+    }
+    if args.undo {
+        return Ok(XfdCommand::Undo);
+    }
+
+    // Parse command structure
+    match args.command.as_deref() {
+        Some("CHANGE") => {
+            let old = args.arg1.as_ref().ok_or("Missing old string for CHANGE command")?;
+            if args.into_keyword.as_deref() != Some("INTO") {
+                return Err("Expected 'INTO' keyword after old string".into());
+            }
+            let new = args.arg2.as_ref().ok_or("Missing new string after INTO keyword")?;
+            Ok(XfdCommand::Change { old: old.clone(), new: new.clone() })
+        },
+        Some("REGEX") => {
+            let pattern = args.arg1.as_ref().ok_or("Missing pattern for REGEX command")?;
+            if args.into_keyword.as_deref() != Some("INTO") {
+                return Err("Expected 'INTO' keyword after pattern".into());
+            }
+            let replacement = args.arg2.as_ref().ok_or("Missing replacement after INTO keyword")?;
+            Ok(XfdCommand::Regex { pattern: pattern.clone(), replacement: replacement.clone() })
+        },
+        Some("snake") => Ok(XfdCommand::Transform(TransformType::Snake)),
+        Some("kebab") => Ok(XfdCommand::Transform(TransformType::Kebab)),
+        Some("pascal") => Ok(XfdCommand::Transform(TransformType::Pascal)),
+        Some("camel") => Ok(XfdCommand::Transform(TransformType::Camel)),
+        Some("title") => Ok(XfdCommand::Transform(TransformType::Title)),
+        Some("lower") => Ok(XfdCommand::Transform(TransformType::Lower)),
+        Some("upper") => Ok(XfdCommand::Transform(TransformType::Upper)),
+        Some("clean") => Ok(XfdCommand::Transform(TransformType::Clean)),
+        Some("sort") => Ok(XfdCommand::Sort { method: SortMethod::Group }), // Default sort method
+        Some("group") => Ok(XfdCommand::Sort { method: SortMethod::Group }),
+        Some("flatten") => Ok(XfdCommand::Sort { method: SortMethod::Flatten }),
+        Some("interactive") => Ok(XfdCommand::Interactive),
+        Some("tui") => Ok(XfdCommand::Tui),
+        Some("undo") => Ok(XfdCommand::Undo),
+        Some(unknown) => Err(format!("Unknown command: {}", unknown).into()),
+        None => Err("No command specified. Use: CHANGE \"old\" INTO \"new\", transform commands, or flags".into()),
+    }
 }
 
 /// Runs the Text-based User Interface (TUI) mode of the application.
@@ -283,31 +292,11 @@ fn run_undo_mode(max_history_size: usize) -> Result<(), Box<dyn Error>> {
     }
 }
 
-/// Run transform mode using the new command structure
-fn run_transform_mode(args: &Args) -> Result<(), Box<dyn Error>> {
-    // Determine which transformation type was specified
-    let transform_type = if args.snake {
-        TransformType::Snake
-    } else if args.kebab {
-        TransformType::Kebab
-    } else if args.pascal {
-        TransformType::Pascal
-    } else if args.camel {
-        TransformType::Camel
-    } else if args.title {
-        TransformType::Title
-    } else if args.lower {
-        TransformType::Lower
-    } else if args.upper {
-        TransformType::Upper
-    } else if args.clean {
-        TransformType::Clean
-    } else {
-        return Err("Transform type is required. Use one of: --snake, --kebab, --pascal, --camel, --title, --lower, --upper, --clean".into());
-    };
+/// Run transform command using XFD syntax
+fn run_transform_command(args: &Args, transform_type: TransformType) -> Result<(), Box<dyn Error>> {
 
-    // Get directory (default to current directory)
-    let directory = args.directory.as_deref().unwrap_or(".");
+    // Get target directory (default to current directory)
+    let directory = args.target.as_deref().unwrap_or(".");
     
     // Validate directory exists
     if !std::path::Path::new(directory).exists() {
@@ -325,7 +314,7 @@ fn run_transform_mode(args: &Args) -> Result<(), Box<dyn Error>> {
     let exclude_patterns: Vec<regex::Regex> = process_exclude_patterns(args.exclude.as_deref())?;
 
     // Print operation mode
-    println!("\n{}", format!("Smart Move - {} Mode", 
+    println!("\n{}", format!("CNP Smart Move - {} Mode", 
         if args.preview { "Preview" } else { "Transform" }).bold());
     println!("Transformation: {}", transform_type.as_str().green());
     println!("Directory: {}", directory.cyan());
@@ -347,7 +336,7 @@ fn run_transform_mode(args: &Args) -> Result<(), Box<dyn Error>> {
     // Process files and directories for transformation
     let mut stats = Stats::default();
     for item_path in files {
-        process_item_transformation(&item_path, transform_type, args.preview, &mut stats)?;
+        process_item_transformation(&item_path, &transform_type, args.preview, &mut stats)?;
     }
 
     // Print results
@@ -413,7 +402,7 @@ fn build_file_list(
 /// Process a single file or directory for transformation
 fn process_item_transformation(
     item_path: &std::path::Path,
-    transform_type: TransformType,
+    transform_type: &TransformType,
     preview_only: bool,
     stats: &mut Stats,
 ) -> Result<(), Box<dyn Error>> {
@@ -471,45 +460,40 @@ fn print_transformation_results(stats: &Stats, preview_only: bool) {
     }
 }
 
-/// Run move mode (replaces old mv functionality)
-fn run_move_mode(_args: &Args) -> Result<(), Box<dyn Error>> {
-    // For now, maintain compatibility with legacy move operations
-    eprintln!("Move mode not yet implemented in new structure.");
-    eprintln!("Use legacy syntax for now or use --interactive mode.");
-    Ok(())
-}
 
-/// Run sort mode (replaces old group/flatten functionality)  
-fn run_sort_mode(args: &Args) -> Result<(), Box<dyn Error>> {
-    let directory = args.directory.as_deref().unwrap_or(".");
+/// Run sort command using XFD syntax
+fn run_sort_command(args: &Args, method: SortMethod) -> Result<(), Box<dyn Error>> {
+    let directory = args.target.as_deref().unwrap_or(".");
     
-    if args.group {
-        println!("\n{}\n", "Smart Move - Group Files by Basename".bold());
-        println!("Processing directory: {}", directory.cyan());
-        sort::group_by_basename(directory, args.preview)?;
-    } else if args.flatten {
-        println!("\n{}\n", "Smart Move - Flatten Directory Structure".bold());
-        println!("Processing directory: {}", directory.cyan());
-        unsort::flatten_directory(directory, args.preview)?;
-        
-        // Also remove empty directories
-        println!("\nRemoving empty directories:");
-        unsort::remove_empty_dirs(directory, args.preview)?;
-    } else if args.by_type {
-        println!("Sort by type not yet implemented.");
-    } else if args.by_date {
-        println!("Sort by date not yet implemented.");
-    } else if args.by_size {
-        println!("Sort by size not yet implemented.");
-    } else {
-        eprintln!("Error: Sort mode requires a sort criteria.");
-        eprintln!("Use: --group, --flatten, --by-type, --by-date, or --by-size");
-        process::exit(1);
+    match method {
+        SortMethod::Group => {
+            println!("\n{}\n", "CNP Smart Move - Group Files by Basename".bold());
+            println!("Processing directory: {}", directory.cyan());
+            sort::group_by_basename(directory, args.preview)?
+        },
+        SortMethod::Flatten => {
+            println!("\n{}\n", "CNP Smart Move - Flatten Directory Structure".bold());
+            println!("Processing directory: {}", directory.cyan());
+            unsort::flatten_directory(directory, args.preview)?;
+            
+            // Also remove empty directories
+            println!("\nRemoving empty directories:");
+            unsort::remove_empty_dirs(directory, args.preview)?
+        },
+        SortMethod::ByType => {
+            println!("Sort by type not yet implemented.");
+        },
+        SortMethod::ByDate => {
+            println!("Sort by date not yet implemented.");
+        },
+        SortMethod::BySize => {
+            println!("Sort by size not yet implemented.");
+        },
     }
 
     if args.preview {
         println!("\n{}", "This was a preview only. No files were actually moved.".bold().blue());
-        println!("{}", "To apply these changes, run the same command without --preview.".blue());
+        println!("{}", "To apply these changes, run the same command without the -p flag.".blue());
     }
 
     Ok(())
@@ -541,3 +525,4 @@ fn process_exclude_patterns(patterns: Option<&str>) -> Result<Vec<regex::Regex>,
         None => Ok(Vec::new()),
     }
 }
+

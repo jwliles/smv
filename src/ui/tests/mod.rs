@@ -26,7 +26,7 @@ mod tests {
         use crate::transformers::transform;
         
         let test_filename = "test-file_example.txt";
-        let result = transform(test_filename, TransformType::Snake);
+        let result = transform(test_filename, &TransformType::Snake);
         
         assert!(result.contains('_'));
         assert!(!result.contains('-'));

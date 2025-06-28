@@ -614,7 +614,7 @@ impl InteractiveSession {
                 .to_string_lossy();
 
             // Apply the transformation
-            let new_name = transform(&filename, transform_type);
+            let new_name = transform(&filename, &transform_type);
 
             // Skip if no change
             if filename == new_name {
@@ -725,7 +725,7 @@ impl InteractiveSession {
                             .to_string_lossy();
 
                         // Apply the transformation
-                        let new_name = transform(&filename, transform_type);
+                        let new_name = transform(&filename, &transform_type);
 
                         // Create the new path
                         let parent = path.parent().unwrap_or(Path::new(""));
@@ -853,7 +853,7 @@ impl InteractiveSession {
                             .to_string_lossy();
 
                         // Apply the transformation
-                        let new_name = transform(&filename, transform_type);
+                        let new_name = transform(&filename, &transform_type);
 
                         // If the name hasn't changed, track but don't show
                         if filename == new_name {
