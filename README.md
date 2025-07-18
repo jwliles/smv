@@ -1,10 +1,13 @@
 # SMV - Smart Move
 
-A powerful, Rust-based drop-in replacement for the standard Unix `mv` command with intelligent filename transformation capabilities.
+A powerful, Rust-based CNP (Canopy) ecosystem tool that replaces the standard Unix `mv` command with intelligent filename transformation capabilities and full CNP grammar support.
 
 ## Features
 
+### Core Functionality
+- **POSIX-compatible mv/cp commands** with all standard flags (-r, -f, -n, -L, -P, --preserve)
 - **Drop-in replacement** for the standard Unix `mv` command
+- **CNP Grammar Support** - Full Canopy ecosystem integration with filters, routes, and tool delegation
 - **Interactive REPL Interface** with command history and tab completion
 - **Smart File Renaming** with multiple transformation strategies:
   - Convert to snake_case (`document-name.pdf` → `document_name.pdf`)
@@ -14,6 +17,15 @@ A powerful, Rust-based drop-in replacement for the standard Unix `mv` command wi
   - Convert to PascalCase (`document_name.pdf` → `DocumentName.pdf`)
   - Convert to lowercase or UPPERCASE
   - Clean up spaces and special characters
+
+### CNP Ecosystem Integration
+- **Filter Keywords**: `NAME:`, `TYPE:`, `EXT:`, `SIZE>`, `DEPTH<`, `MODIFIED>`, `ACCESSED<`
+- **Semantic Groups**: `FOR:notes`, `FOR:media`, `FOR:scripts`, `FOR:projects`, `FOR:configs`
+- **Tool Delegation**: `TO:say`, `TO:dff`, `TO:xfd`, `TO:dsc` for specialized operations
+- **Output Routing**: `INTO:file.txt`, `FORMAT:json/csv/yaml` for structured output
+- **Advanced Filtering**: Complex file discovery with logical grouping
+
+### Advanced Features
 - **Directory Organization**:
   - Group files by basename into directories
   - Flatten directory structures by moving all files to the root
@@ -44,19 +56,99 @@ cargo install --path .
 
 ## Usage
 
-### Basic Usage (like standard mv)
+### CNP Grammar (Recommended)
 
-SMV works exactly like the standard `mv` command for basic moving and renaming:
+SMV supports the full CNP (Canopy) grammar for advanced file operations with filters, semantic groups, and tool delegation:
 
+#### Basic CNP Syntax
+```bash
+# Transform with extension filter
+smv snake . EXT:md -p                    # Convert markdown files to snake_case
+
+# Filter by file type  
+smv kebab . TYPE:file EXT:txt -r         # Only process .txt files, recursively
+
+# Use semantic groups
+smv title . FOR:notes -p                 # Transform all note files (md, txt, etc.)
+smv clean . FOR:media                    # Clean up media filenames
+
+# Size-based filtering
+smv pascal . SIZE>1MB TYPE:file -p       # Large files only
+
+# Date-based filtering  
+smv lower . MODIFIED>2024-01-01 -r       # Files modified after Jan 1, 2024
+```
+
+#### Advanced CNP Features
+```bash
+# Tool delegation - delegate complex operations to specialized tools
+smv snake . EXT:epub TO:say split_and_titlecase  # Use SAY for word segmentation
+smv organize . FOR:media TO:dff find_duplicates  # Use DFF to find duplicate media
+
+# Output routing - save results to files
+smv clean . FOR:scripts INTO:cleaned_files.txt   # Save file list to text file
+smv title . TYPE:file FORMAT:json -p             # Output as JSON format
+
+# Complex filtering with multiple criteria
+smv kebab . TYPE:file EXT:md SIZE<1MB NAME:draft -p
+```
+
+#### CNP Semantic Groups
+- `FOR:notes` - Markdown, text, and documentation files  
+- `FOR:media` - Images, videos, and audio files
+- `FOR:scripts` - Shell, Python, Rust, and other script files
+- `FOR:projects` - Source directories and project folders
+- `FOR:configs` - Configuration files (yaml, json, toml, etc.)
+
+### Basic Usage (POSIX-compatible mv/cp)
+
+SMV provides full POSIX-compatible file operations with all standard flags:
+
+#### Move Operations
 ```bash
 # Move a file to another location
-smv file.txt /path/to/destination/
+smv mv file.txt /path/to/destination/
 
 # Move multiple files to a directory
-smv file1.txt file2.txt destination_directory/
+smv mv file1.txt file2.txt destination_directory/
 
 # Rename a file
-smv old_name.txt new_name.txt
+smv mv old_name.txt new_name.txt
+
+# Move with flags
+smv mv source dest -f              # Force overwrite
+smv mv source dest -n              # No-clobber (don't overwrite)
+smv mv *.txt backup/ -r            # Recursive move
+smv mv file dest --interactive-confirm  # Prompt before overwrite
+```
+
+#### Copy Operations
+```bash
+# Copy a file
+smv cp file.txt backup/
+
+# Copy multiple files
+smv cp file1.txt file2.txt *.md backup/
+
+# Copy directories recursively
+smv cp source_dir/ backup_dir/ -r
+
+# Copy with metadata preservation
+smv cp important.txt backup/ --preserve
+
+# Copy with symbolic link handling
+smv cp -L symlink dest             # Dereference symlinks
+smv cp -P symlink dest             # Preserve symlinks
+```
+
+#### Standard Flags
+- `-r` - Recursive (for directories)
+- `-f` - Force (overwrite without confirmation)
+- `-n` - No-clobber (never overwrite existing files)
+- `-L` - Dereference symbolic links
+- `-P` - Do not follow symbolic links
+- `--preserve` - Preserve file attributes, ownership, and timestamps
+- `--interactive-confirm` - Prompt before overwriting files
 
 ```
 
@@ -197,32 +289,58 @@ Commands:
   quit                        - Exit program
 ```
 
-## Full Command Options
+## Command Reference
+
+### CNP Grammar Syntax
+
+```
+smv <COMMAND> <PATH> [FILTERS] [ROUTES] [FLAGS]
+```
+
+**Commands**: `snake`, `kebab`, `pascal`, `camel`, `title`, `lower`, `upper`, `clean`, `CHANGE "old" INTO "new"`, `REGEX "pattern" INTO "replacement"`
+
+**Filters**:
+- `NAME:value` - Match filenames containing value  
+- `TYPE:file|folder|symlink` - Filter by file type
+- `EXT:extension` - Filter by file extension
+- `SIZE>1MB` / `SIZE<500KB` - Filter by file size
+- `DEPTH>2` / `DEPTH<1` - Filter by directory depth  
+- `MODIFIED>2024-01-01` / `MODIFIED<2023-12-31` - Filter by modification date
+- `ACCESSED>2024-01-01` / `ACCESSED<2023-12-31` - Filter by access date
+- `FOR:notes|media|scripts|projects|configs` - Semantic file groups
+
+**Routes**:
+- `TO:tool` - Delegate operation to another CNP tool (say, dff, xfd, dsc)
+- `INTO:filename` - Save output to file
+- `FORMAT:json|csv|yaml|text` - Format output
+
+**Flags**: `-r` (recursive), `-p` (preview), `-f` (force), `-i` (interactive), `-T` (TUI), `-u` (undo)
+
+### Legacy Command Options
 
 ```
 Options:
   -i, --interactive              Launch interactive REPL interface
   -p, --preview                  Preview changes without applying them
   -r, --recursive                Process subdirectories recursively
-  -e, --extensions <EXTENSIONS>  Comma-separated list of file extensions to process
-  -a, --remove-accents           Remove accents from filenames
-      --clean                    Clean up spaces and special characters
-      --snake                    Convert filenames to snake_case
-      --kebab                    Convert filenames to kebab-case
-      --title                    Convert filenames to Title Case
-      --camel                    Convert filenames to camelCase
-      --pascal                   Convert filenames to PascalCase
-      --lower                    Convert filenames to lowercase
-      --upper                    Convert filenames to UPPERCASE
-      --dry-run                  Same as preview - show changes without applying
-      --undo                     Undo the last operation
+  -f, --force                    Skip confirmations
+  -T, --tui                      Launch terminal UI mode
+  -u, --undo                     Undo the last operation
       --exclude <PATTERNS>       Comma-separated patterns to exclude
-      --group                    Group files by basename into directories
-      --flatten                  Flatten all files from subdirectories into a single directory and remove empty directories
       --max-history-size <SIZE>  Maximum number of operations in history [default: 50]
   -h, --help                     Print help
   -V, --version                  Print version
 ```
+
+### Transform Commands
+- `snake` - Convert to snake_case
+- `kebab` - Convert to kebab-case  
+- `pascal` - Convert to PascalCase
+- `camel` - Convert to camelCase
+- `title` - Convert to Title Case
+- `lower` - Convert to lowercase
+- `upper` - Convert to UPPERCASE
+- `clean` - Clean up spaces and special characters
 
 ## Transformations
 
@@ -277,6 +395,12 @@ See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and 
 
 ### Completed Features ✓
 
+- **CNP Grammar Support**: Full Canopy ecosystem integration with filters, routes, and tool delegation
+- **Advanced Filtering**: NAME:, TYPE:, EXT:, SIZE>, DEPTH<, MODIFIED>, ACCESSED< filters
+- **Semantic Groups**: FOR:notes, FOR:media, FOR:scripts, FOR:projects, FOR:configs
+- **Tool Delegation**: TO:tool routing for specialized operations
+- **Output Routing**: INTO:file and FORMAT:json/csv/yaml support
+- **DSC Integration**: Ultra-fast file discovery using DSC instead of broken glob patterns
 - **New Command Structure**: Implemented LAR project command philosophy
 - **Interactive Guidance System**: Excel-like command preview and help (designed)
 - **Sequential Command Parsing**: Position-based argument validation
@@ -289,8 +413,8 @@ See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and 
 - [ ] **F1 Help System**: Context-sensitive help for each command position
 - [ ] **Tab Completion**: Cycle through valid options at each position
 - [ ] **AFN Library Integration**: Extract shared command guidance into AFN library
-- [ ] **Fix CLI glob pattern handling**: Make CLI mode correctly handle glob patterns like `*.org`
-- [ ] **Fix kebab-case transformation**: Make kebab-case correctly convert spaces to hyphens
+- [ ] **Complete Tool Delegation**: Finalize integration with SAY, DFF, XFD tools
+- [ ] **WHERE Filter Groups**: Implement logical grouping of multiple filters
 
 ### Future Enhancements
 

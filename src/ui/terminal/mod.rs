@@ -29,6 +29,8 @@ pub enum AppMode {
     Command,
     /// Insert mode - for editing text values
     Insert,
+    /// Help mode - showing available actions and shortcuts
+    Help,
 }
 
 impl Default for AppMode {

@@ -1,6 +1,6 @@
+use deunicode::deunicode;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use deunicode::deunicode;
 
 /// Transformation types available for filename conversion
 ///
@@ -91,7 +91,9 @@ impl TransformType {
             TransformType::Lower => "lower".to_string(),
             TransformType::Upper => "upper".to_string(),
             TransformType::Replace(find, replace) => format!("replace({} → {})", find, replace),
-            TransformType::ReplaceRegex(pattern, replacement) => format!("replace-regex({} → {})", pattern, replacement),
+            TransformType::ReplaceRegex(pattern, replacement) => {
+                format!("replace-regex({} → {})", pattern, replacement)
+            }
         }
     }
 }
@@ -127,7 +129,9 @@ pub fn transform(name: &str, transform_type: &TransformType) -> String {
         TransformType::Lower => name.to_lowercase(),
         TransformType::Upper => name.to_uppercase(),
         TransformType::Replace(find, replace) => replace_substring(name, find, replace),
-        TransformType::ReplaceRegex(pattern, replacement) => replace_regex(name, pattern, replacement),
+        TransformType::ReplaceRegex(pattern, replacement) => {
+            replace_regex(name, pattern, replacement)
+        }
     }
 }
 
@@ -212,8 +216,8 @@ fn kebab_case_preserve_extension(name: &str) -> String {
 }
 
 /// Helper function to apply a transformation while preserving file extension
-fn preserve_extension_transform<F>(name: &str, transform_fn: F) -> String 
-where 
+fn preserve_extension_transform<F>(name: &str, transform_fn: F) -> String
+where
     F: Fn(&str) -> String,
 {
     if let Some(dot_pos) = name.rfind('.') {
@@ -304,13 +308,13 @@ fn pascal_case_preserve_extension(name: &str) -> String {
 fn tokenize(name: &str, include_dots: bool) -> Vec<String> {
     // Apply unicode normalization first
     let normalized = deunicode(name);
-    
+
     let separator_regex = if include_dots {
         &WORD_SEPARATORS_WITH_DOTS_RE
     } else {
         &WORD_SEPARATORS_RE
     };
-    
+
     separator_regex
         .split(&normalized)
         .filter(|s| !s.is_empty())
@@ -323,14 +327,17 @@ fn split_camel_case_word(word: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut current_word = String::new();
     let chars: Vec<char> = word.chars().collect();
-    
+
     for (i, &ch) in chars.iter().enumerate() {
-        if ch.is_uppercase() && i > 0 && (
-            // Previous char is lowercase or digit
-            chars[i-1].is_lowercase() || chars[i-1].is_ascii_digit() ||
+        if ch.is_uppercase()
+            && i > 0
+            && (
+                // Previous char is lowercase or digit
+                chars[i-1].is_lowercase() || chars[i-1].is_ascii_digit() ||
             // Current char is followed by lowercase (handles XMLDocument -> XML Document)
             (i + 1 < chars.len() && chars[i+1].is_lowercase())
-        ) {
+            )
+        {
             if !current_word.is_empty() {
                 result.push(current_word.clone());
                 current_word.clear();
@@ -338,11 +345,11 @@ fn split_camel_case_word(word: &str) -> Vec<String> {
         }
         current_word.push(ch);
     }
-    
+
     if !current_word.is_empty() {
         result.push(current_word);
     }
-    
+
     result
 }
 
@@ -361,7 +368,7 @@ fn format_camel(tokens: &[String]) -> String {
     if tokens.is_empty() {
         return String::new();
     }
-    
+
     let mut result = tokens[0].to_lowercase();
     for token in tokens.iter().skip(1) {
         result.push_str(&capitalize_first(token));
@@ -371,7 +378,8 @@ fn format_camel(tokens: &[String]) -> String {
 
 /// Format tokens as PascalCase
 fn format_pascal(tokens: &[String]) -> String {
-    tokens.iter()
+    tokens
+        .iter()
         .map(|token| capitalize_first(token))
         .collect::<Vec<String>>()
         .join("")
@@ -379,7 +387,8 @@ fn format_pascal(tokens: &[String]) -> String {
 
 /// Format tokens as Title Case
 fn format_title(tokens: &[String]) -> String {
-    tokens.iter()
+    tokens
+        .iter()
         .map(|token| capitalize_first(token))
         .collect::<Vec<String>>()
         .join(" ")
@@ -432,7 +441,10 @@ fn replace_regex(name: &str, pattern: &str, replacement: &str) -> String {
     match Regex::new(pattern) {
         Ok(re) => re.replace_all(name, replacement).to_string(),
         Err(_) => {
-            eprintln!("Warning: Invalid regex pattern '{}', returning original string", pattern);
+            eprintln!(
+                "Warning: Invalid regex pattern '{}', returning original string",
+                pattern
+            );
             name.to_string()
         }
     }
@@ -459,10 +471,13 @@ mod tests {
             snake_case("Mix-of spaces_and-hyphens"),
             "mix_of_spaces_and_hyphens"
         );
-        
+
         // Test the extension-preserving version
         assert_eq!(snake_case_preserve_extension("My-File.txt"), "my_file.txt");
-        assert_eq!(snake_case_preserve_extension("HelloWorld.pdf"), "hello_world.pdf");
+        assert_eq!(
+            snake_case_preserve_extension("HelloWorld.pdf"),
+            "hello_world.pdf"
+        );
     }
 
     #[test]
@@ -477,10 +492,13 @@ mod tests {
         );
         // Test the specific bug case from BUGS.md - no extension preservation in direct function
         assert_eq!(kebab_case("Dir Template.txt"), "dir-template-txt");
-        
+
         // Test the extension-preserving version
         assert_eq!(kebab_case_preserve_extension("My_File.txt"), "my-file.txt");
-        assert_eq!(kebab_case_preserve_extension("Dir Template.txt"), "dir-template.txt");
+        assert_eq!(
+            kebab_case_preserve_extension("Dir Template.txt"),
+            "dir-template.txt"
+        );
     }
 
     #[test]
@@ -508,27 +526,57 @@ mod tests {
 
     #[test]
     fn test_replace_substring() {
-        assert_eq!(replace_substring("hello_world.txt", "hello", "hi"), "hi_world.txt");
-        assert_eq!(replace_substring("AFN_project.rs", "AFN", "CNP"), "CNP_project.rs");
-        assert_eq!(replace_substring("test_AFN_file.txt", "AFN", "CNP"), "test_CNP_file.txt");
-        assert_eq!(replace_substring("no_match.txt", "xyz", "abc"), "no_match.txt");
-        assert_eq!(replace_substring("multiple_AFN_AFN.txt", "AFN", "CNP"), "multiple_CNP_CNP.txt");
+        assert_eq!(
+            replace_substring("hello_world.txt", "hello", "hi"),
+            "hi_world.txt"
+        );
+        assert_eq!(
+            replace_substring("AFN_project.rs", "AFN", "CNP"),
+            "CNP_project.rs"
+        );
+        assert_eq!(
+            replace_substring("test_AFN_file.txt", "AFN", "CNP"),
+            "test_CNP_file.txt"
+        );
+        assert_eq!(
+            replace_substring("no_match.txt", "xyz", "abc"),
+            "no_match.txt"
+        );
+        assert_eq!(
+            replace_substring("multiple_AFN_AFN.txt", "AFN", "CNP"),
+            "multiple_CNP_CNP.txt"
+        );
     }
 
     #[test]
     fn test_replace_regex() {
         assert_eq!(replace_regex("file123.txt", r"\d+", "456"), "file456.txt");
-        assert_eq!(replace_regex("AFN_project_v1.rs", r"AFN", "CNP"), "CNP_project_v1.rs");
-        assert_eq!(replace_regex("test_file_2023.txt", r"\d{4}", "2024"), "test_file_2024.txt");
-        assert_eq!(replace_regex("CamelCase.txt", r"([A-Z])", "_$1"), "_Camel_Case.txt");
-        assert_eq!(replace_regex("invalid[regex.txt", r"[", "replacement"), "invalid[regex.txt");
+        assert_eq!(
+            replace_regex("AFN_project_v1.rs", r"AFN", "CNP"),
+            "CNP_project_v1.rs"
+        );
+        assert_eq!(
+            replace_regex("test_file_2023.txt", r"\d{4}", "2024"),
+            "test_file_2024.txt"
+        );
+        assert_eq!(
+            replace_regex("CamelCase.txt", r"([A-Z])", "_$1"),
+            "_Camel_Case.txt"
+        );
+        assert_eq!(
+            replace_regex("invalid[regex.txt", r"[", "replacement"),
+            "invalid[regex.txt"
+        );
     }
 
     #[test]
     fn test_transform_replace() {
         let replace_transform = TransformType::Replace("AFN".to_string(), "CNP".to_string());
-        assert_eq!(transform("AFN_project.rs", &replace_transform), "CNP_project.rs");
-        
+        assert_eq!(
+            transform("AFN_project.rs", &replace_transform),
+            "CNP_project.rs"
+        );
+
         let regex_transform = TransformType::ReplaceRegex(r"\d+".to_string(), "XXX".to_string());
         assert_eq!(transform("file123.txt", &regex_transform), "fileXXX.txt");
     }

@@ -37,17 +37,44 @@ mod sort_unsort_tests {
         let image_dir = Path::new(&temp_path).join("image");
         let notes_dir = Path::new(&temp_path).join("notes");
 
-        assert!(document_dir.exists() && document_dir.is_dir(), "document directory was not created");
-        assert!(image_dir.exists() && image_dir.is_dir(), "image directory was not created");
-        assert!(notes_dir.exists() && notes_dir.is_dir(), "notes directory was not created");
+        assert!(
+            document_dir.exists() && document_dir.is_dir(),
+            "document directory was not created"
+        );
+        assert!(
+            image_dir.exists() && image_dir.is_dir(),
+            "image directory was not created"
+        );
+        assert!(
+            notes_dir.exists() && notes_dir.is_dir(),
+            "notes directory was not created"
+        );
 
         // Check if files were moved to their respective directories
-        assert!(document_dir.join("document.txt").exists(), "document.txt was not moved");
-        assert!(document_dir.join("document.pdf").exists(), "document.pdf was not moved");
-        assert!(document_dir.join("document.docx").exists(), "document.docx was not moved");
-        assert!(image_dir.join("image.jpg").exists(), "image.jpg was not moved");
-        assert!(image_dir.join("image.png").exists(), "image.png was not moved");
-        assert!(notes_dir.join("notes.txt").exists(), "notes.txt was not moved");
+        assert!(
+            document_dir.join("document.txt").exists(),
+            "document.txt was not moved"
+        );
+        assert!(
+            document_dir.join("document.pdf").exists(),
+            "document.pdf was not moved"
+        );
+        assert!(
+            document_dir.join("document.docx").exists(),
+            "document.docx was not moved"
+        );
+        assert!(
+            image_dir.join("image.jpg").exists(),
+            "image.jpg was not moved"
+        );
+        assert!(
+            image_dir.join("image.png").exists(),
+            "image.png was not moved"
+        );
+        assert!(
+            notes_dir.join("notes.txt").exists(),
+            "notes.txt was not moved"
+        );
     }
 
     #[test]
@@ -78,16 +105,40 @@ mod sort_unsort_tests {
         flatten_directory(&temp_path, false).expect("Failed to flatten directory");
 
         // Check if files were moved to the root directory
-        assert!(Path::new(&temp_path).join("file1.txt").exists(), "file1.txt was not moved to root");
-        assert!(Path::new(&temp_path).join("file2.pdf").exists(), "file2.pdf was not moved to root");
-        assert!(Path::new(&temp_path).join("file3.docx").exists(), "file3.docx was not moved to root");
-        assert!(Path::new(&temp_path).join("file4.jpg").exists(), "file4.jpg was not moved to root");
+        assert!(
+            Path::new(&temp_path).join("file1.txt").exists(),
+            "file1.txt was not moved to root"
+        );
+        assert!(
+            Path::new(&temp_path).join("file2.pdf").exists(),
+            "file2.pdf was not moved to root"
+        );
+        assert!(
+            Path::new(&temp_path).join("file3.docx").exists(),
+            "file3.docx was not moved to root"
+        );
+        assert!(
+            Path::new(&temp_path).join("file4.jpg").exists(),
+            "file4.jpg was not moved to root"
+        );
 
         // Check that the original files no longer exist in their original locations
-        assert!(!nested_dir1.join("file1.txt").exists(), "file1.txt still exists in nested directory");
-        assert!(!nested_dir1.join("file2.pdf").exists(), "file2.pdf still exists in nested directory");
-        assert!(!nested_dir2.join("file3.docx").exists(), "file3.docx still exists in nested directory");
-        assert!(!nested_dir2.join("file4.jpg").exists(), "file4.jpg still exists in nested directory");
+        assert!(
+            !nested_dir1.join("file1.txt").exists(),
+            "file1.txt still exists in nested directory"
+        );
+        assert!(
+            !nested_dir1.join("file2.pdf").exists(),
+            "file2.pdf still exists in nested directory"
+        );
+        assert!(
+            !nested_dir2.join("file3.docx").exists(),
+            "file3.docx still exists in nested directory"
+        );
+        assert!(
+            !nested_dir2.join("file4.jpg").exists(),
+            "file4.jpg still exists in nested directory"
+        );
     }
 
     #[test]

@@ -24,10 +24,10 @@ mod tests {
     #[test]
     fn test_transform_type() {
         use crate::transformers::transform;
-        
+
         let test_filename = "test-file_example.txt";
         let result = transform(test_filename, &TransformType::Snake);
-        
+
         assert!(result.contains('_'));
         assert!(!result.contains('-'));
     }

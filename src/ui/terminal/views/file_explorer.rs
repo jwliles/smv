@@ -6,7 +6,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::widgets::ListState;
 
 use crate::ui::terminal::{AppMode, KeyResult};
-use crate::ui::{UiAction, TransformAction};
+use crate::ui::{TransformAction, UiAction};
 use skim::prelude::*;
 
 /// File information for display
@@ -33,7 +33,7 @@ pub struct FileExplorer {
     /// List selection state
     pub state: ListState,
     /// Visual selection start
-    visual_selection_start: Option<usize>,
+    pub visual_selection_start: Option<usize>,
     /// Current search pattern (if any)
     search_pattern: Option<String>,
     /// Filtered files based on search
@@ -265,7 +265,9 @@ impl FileExplorer {
                     if !item.is_dir {
                         // Add to queue for snake_case transformation
                         // This will be handled by the parent app
-                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Snake)));
+                        return KeyResult::Handled(Some(UiAction::Transform(
+                            TransformAction::Snake,
+                        )));
                     }
                 }
                 KeyResult::Handled(None)
@@ -274,7 +276,9 @@ impl FileExplorer {
                 // Kebab case transformation
                 if let Some(item) = self.selected() {
                     if !item.is_dir {
-                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Kebab)));
+                        return KeyResult::Handled(Some(UiAction::Transform(
+                            TransformAction::Kebab,
+                        )));
                     }
                 }
                 KeyResult::Handled(None)
@@ -283,7 +287,9 @@ impl FileExplorer {
                 // Clean transformation
                 if let Some(item) = self.selected() {
                     if !item.is_dir {
-                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Clean)));
+                        return KeyResult::Handled(Some(UiAction::Transform(
+                            TransformAction::Clean,
+                        )));
                     }
                 }
                 KeyResult::Handled(None)
@@ -292,7 +298,9 @@ impl FileExplorer {
                 // Title case transformation
                 if let Some(item) = self.selected() {
                     if !item.is_dir {
-                        return KeyResult::Handled(Some(UiAction::Transform(TransformAction::Title)));
+                        return KeyResult::Handled(Some(UiAction::Transform(
+                            TransformAction::Title,
+                        )));
                     }
                 }
                 KeyResult::Handled(None)
@@ -406,7 +414,13 @@ impl FileExplorer {
             }
 
             let i = match self.state.selected() {
-                Some(i) => (i + count) % len,
+                Some(i) => {
+                    if i + count < len {
+                        i + count
+                    } else {
+                        len - 1 // Stop at last item instead of wrapping
+                    }
+                }
                 None => 0,
             };
             self.state.select(Some(i));
@@ -418,7 +432,13 @@ impl FileExplorer {
             }
 
             let i = match self.state.selected() {
-                Some(i) => (i + count) % len,
+                Some(i) => {
+                    if i + count < len {
+                        i + count
+                    } else {
+                        len - 1 // Stop at last item instead of wrapping
+                    }
+                }
                 None => 0,
             };
             self.state.select(Some(i));
@@ -439,7 +459,7 @@ impl FileExplorer {
                     if i >= count {
                         i - count
                     } else {
-                        len - (count - i) % len
+                        0 // Stop at first item instead of wrapping
                     }
                 }
                 None => 0,
@@ -457,7 +477,7 @@ impl FileExplorer {
                     if i >= count {
                         i - count
                     } else {
-                        len - (count - i) % len
+                        0 // Stop at first item instead of wrapping
                     }
                 }
                 None => 0,

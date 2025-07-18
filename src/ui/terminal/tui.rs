@@ -27,7 +27,7 @@ impl Tui {
         // Setup terminal
         terminal::enable_raw_mode()
             .map_err(|e| anyhow::anyhow!("Failed to enable raw mode: {}", e))?;
-        
+
         let mut stdout = io::stdout();
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
             .map_err(|e| anyhow::anyhow!("Failed to initialize terminal: {}", e))?;
@@ -38,9 +38,11 @@ impl Tui {
             .map_err(|e| anyhow::anyhow!("Failed to create terminal: {}", e))?;
 
         // Clear the screen and hide cursor
-        terminal.clear()
+        terminal
+            .clear()
             .map_err(|e| anyhow::anyhow!("Failed to clear terminal: {}", e))?;
-        terminal.hide_cursor()
+        terminal
+            .hide_cursor()
             .map_err(|e| anyhow::anyhow!("Failed to hide cursor: {}", e))?;
 
         // Create Tui instance
@@ -58,7 +60,7 @@ impl Tui {
         // Restore cursor and clear screen
         self.terminal.show_cursor()?;
         self.terminal.clear()?;
-        
+
         // Restore terminal state
         terminal::disable_raw_mode()?;
         execute!(

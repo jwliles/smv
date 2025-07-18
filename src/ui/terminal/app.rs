@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
 
+use crate::transformers::transform;
 use crate::ui::terminal::views::{FileExplorer, FileItem, PreviewView, QueueView};
 use crate::ui::terminal::{AppMode, Event, KeyResult, Tui};
-use crate::ui::{Theme, UiAction, UserInterface, TransformAction};
-use crate::transformers::transform;
+use crate::ui::{Theme, TransformAction, UiAction, UserInterface};
 use crate::{sort, unsort};
 
 /// Queue for file operations to be performed
@@ -123,10 +123,14 @@ impl App {
 
         // Create file explorer
         let mut explorer = FileExplorer::new(current_dir.clone());
-        
+
         // Debug: Log file count
-        eprintln!("DEBUG: Loaded {} files in {}", explorer.files.len(), current_dir.display());
-        
+        eprintln!(
+            "DEBUG: Loaded {} files in {}",
+            explorer.files.len(),
+            current_dir.display()
+        );
+
         // Ensure we have at least some content to display
         if explorer.files.is_empty() {
             eprintln!("DEBUG: No files found, adding placeholder");
@@ -164,8 +168,9 @@ impl App {
                 return Ok(());
             }
             (KeyCode::Char('?'), KeyModifiers::NONE) => {
-                // Show help
-                self.status_message = String::from("Help mode - press ESC to exit");
+                // Toggle help mode
+                self.mode = AppMode::Help;
+                self.status_message = String::from("Help mode - press ESC or ? to exit");
                 return Ok(());
             }
             (KeyCode::Esc, KeyModifiers::NONE) => {
@@ -183,6 +188,7 @@ impl App {
             AppMode::Visual => self.handle_visual_mode_key(key)?,
             AppMode::Command => self.handle_command_mode_key(key)?,
             AppMode::Insert => self.handle_insert_mode_key(key)?,
+            AppMode::Help => self.handle_help_mode_key(key)?,
         }
 
         Ok(())
@@ -239,6 +245,13 @@ impl App {
 
     /// Handle keys in visual mode
     fn handle_visual_mode_key(&mut self, key: KeyEvent) -> anyhow::Result<()> {
+        // Handle escape to return to normal mode
+        if matches!(key.code, KeyCode::Esc) {
+            self.mode = AppMode::Normal;
+            self.status_message = String::from("Normal mode");
+            return Ok(());
+        }
+
         // Handle visual mode selection
         match self.explorer.handle_key(key, &self.mode) {
             KeyResult::Handled(action) => {
@@ -282,6 +295,22 @@ impl App {
         Ok(())
     }
 
+    /// Handle keys in help mode
+    fn handle_help_mode_key(&mut self, key: KeyEvent) -> anyhow::Result<()> {
+        match key.code {
+            KeyCode::Char('?') | KeyCode::Esc | KeyCode::Char('q') => {
+                // Exit help mode
+                self.mode = AppMode::Normal;
+                self.status_message = String::from("Normal mode");
+            }
+            _ => {
+                // Ignore other keys in help mode
+            }
+        }
+
+        Ok(())
+    }
+
     /// Handle UI action
     fn handle_ui_action(&mut self, action: UiAction) -> anyhow::Result<()> {
         match action {
@@ -295,7 +324,16 @@ impl App {
                 self.status_message = String::from("Help view (not implemented)");
             }
             UiAction::AddToQueue => {
-                if let Some(file) = self.explorer.selected() {
+                // Handle both single file (normal mode) and multiple files (visual mode)
+                let files_to_add: Vec<_> = self
+                    .explorer
+                    .visual_selection()
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                let mut added_count = 0;
+
+                for file in files_to_add {
                     if !file.is_dir {
                         let operation = FileOperation {
                             source: file.path.clone(),
@@ -303,15 +341,42 @@ impl App {
                             operation_type: OperationType::Move,
                         };
                         self.queue.add(operation);
-                        self.status_message = format!("Added {} to queue", file.name);
+                        added_count += 1;
                     }
+                }
+
+                if added_count > 0 {
+                    self.status_message = format!("Added {} file(s) to queue", added_count);
+                } else {
+                    self.status_message = String::from("No files to add (directories are ignored)");
                 }
             }
             UiAction::Transform(transform_action) => {
-                if let Some(file) = self.explorer.selected().cloned() {
+                // Handle both single file (normal mode) and multiple files (visual mode)
+                let files_to_transform: Vec<_> = self
+                    .explorer
+                    .visual_selection()
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                let mut added_count = 0;
+
+                for file in files_to_transform {
                     if !file.is_dir {
                         self.add_transform_to_queue(&file, transform_action)?;
+                        added_count += 1;
                     }
+                }
+
+                if added_count > 0 {
+                    self.status_message = format!(
+                        "Added {} file(s) to queue for {} transformation",
+                        added_count,
+                        transform_action.as_str()
+                    );
+                } else {
+                    self.status_message =
+                        String::from("No files to transform (directories are ignored)");
                 }
             }
             UiAction::GroupFiles => {
@@ -335,7 +400,11 @@ impl App {
     }
 
     /// Add a transformation operation to the queue
-    fn add_transform_to_queue(&mut self, file: &FileItem, transform_action: TransformAction) -> anyhow::Result<()> {
+    fn add_transform_to_queue(
+        &mut self,
+        file: &FileItem,
+        transform_action: TransformAction,
+    ) -> anyhow::Result<()> {
         let transform_type = match transform_action {
             TransformAction::Snake => crate::transformers::TransformType::Snake,
             TransformAction::Kebab => crate::transformers::TransformType::Kebab,
@@ -348,13 +417,17 @@ impl App {
         };
 
         // Get the filename and apply transformation
-        let filename = file.path.file_name()
+        let filename = file
+            .path
+            .file_name()
             .ok_or_else(|| anyhow::anyhow!("Invalid filename"))?
             .to_string_lossy();
         let new_filename = transform(&filename, &transform_type);
-        
+
         // Create new path with transformed filename
-        let new_path = file.path.parent()
+        let new_path = file
+            .path
+            .parent()
             .ok_or_else(|| anyhow::anyhow!("Invalid parent directory"))?
             .join(&new_filename);
 
@@ -365,8 +438,12 @@ impl App {
         };
 
         self.queue.add(operation);
-        self.status_message = format!("Added {} transformation for {}", transform_action.as_str(), file.name);
-        
+        self.status_message = format!(
+            "Added {} transformation for {}",
+            transform_action.as_str(),
+            file.name
+        );
+
         Ok(())
     }
 
@@ -393,11 +470,14 @@ impl App {
         }
 
         self.queue.clear();
-        self.status_message = format!("Executed: {} success, {} errors", success_count, error_count);
-        
+        self.status_message = format!(
+            "Executed: {} success, {} errors",
+            success_count, error_count
+        );
+
         // Reload the file explorer to show changes
         let _ = self.explorer.reload_files();
-        
+
         Ok(())
     }
 
@@ -440,8 +520,18 @@ impl App {
         let status_message = self.status_message.clone();
         let mode = format!("{:?}", self.mode);
         let queue_len = self.queue.operations().len();
-        let files_data: Vec<(String, bool)> = self.explorer.files.iter()
-            .map(|file| (file.name.clone(), file.is_dir))
+        let selected_index = self.explorer.state.selected();
+        let visual_start = if matches!(self.mode, AppMode::Visual) {
+            self.explorer.visual_selection_start
+        } else {
+            None
+        };
+        let files_data: Vec<(String, bool, usize)> = self
+            .explorer
+            .files
+            .iter()
+            .enumerate()
+            .map(|(idx, file)| (file.name.clone(), file.is_dir, idx))
             .collect();
 
         self.tui.draw(|frame| {
@@ -478,40 +568,180 @@ impl App {
                 ])
                 .split(chunks[1]);
 
-            // File explorer with real data
+            // File explorer with real data and visual selection support
             let explorer_content: Vec<ListItem> = files_data.iter()
-                .map(|(name, is_dir)| {
+                .map(|(name, is_dir, idx)| {
                     let icon = if *is_dir { "📁" } else { "📄" };
-                    ListItem::new(format!("{} {}", icon, name))
+                    let mut line = format!("{} {}", icon, name);
+
+                    // Add visual selection indicator
+                    if let (Some(start), Some(current)) = (visual_start, selected_index) {
+                        let (min, max) = if start <= current { (start, current) } else { (current, start) };
+                        if *idx >= min && *idx <= max {
+                            line = format!("► {}", line);  // Visual selection marker
+                        }
+                    }
+
+                    ListItem::new(line)
                 })
                 .collect();
-            
+
             let explorer = List::new(explorer_content)
                 .block(Block::default().borders(Borders::ALL).title("Files"))
                 .style(Style::default().fg(Color::White))
-                .highlight_style(Style::default().add_modifier(Modifier::BOLD).bg(Color::Blue));
-            
-            frame.render_widget(explorer, main_chunks[0]);
+                .highlight_style(Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD));
 
-            // Queue view
+            frame.render_stateful_widget(explorer, main_chunks[0], &mut self.explorer.state);
+
+            // Queue view with detailed operations
             let queue_content = if queue_len > 0 {
-                vec![ListItem::new(format!("Operations: {}", queue_len))]
+                let mut items = vec![ListItem::new(format!("📝 {} operations pending:", queue_len))];
+
+                // Show up to 8 operations in detail
+                for (_i, op) in self.queue.operations().iter().take(8).enumerate() {
+                    let op_icon = match &op.operation_type {
+                        OperationType::Move => "📁",
+                        OperationType::Transform(t) => match t {
+                            crate::transformers::TransformType::Snake => "🐍",
+                            crate::transformers::TransformType::Kebab => "🍢",
+                            crate::transformers::TransformType::Clean => "🧹",
+                            crate::transformers::TransformType::Title => "📚",
+                            _ => "✏️",
+                        }
+                    };
+
+                    let source_name = op.source.file_name()
+                        .map(|n| n.to_string_lossy())
+                        .unwrap_or_else(|| "<unknown>".into());
+                    let dest_name = op.destination.file_name()
+                        .map(|n| n.to_string_lossy())
+                        .unwrap_or_else(|| "<unknown>".into());
+
+                    let op_text = if source_name == dest_name {
+                        format!("{} {}", op_icon, source_name)
+                    } else {
+                        format!("{} {} → {}", op_icon, source_name, dest_name)
+                    };
+
+                    items.push(ListItem::new(op_text));
+                }
+
+                if queue_len > 8 {
+                    items.push(ListItem::new(format!("... and {} more", queue_len - 8)));
+                }
+
+                items.push(ListItem::new(""));
+                items.push(ListItem::new("Press 'x' to execute all"));
+                items.push(ListItem::new("Press 'q' to clear queue"));
+
+                items
             } else {
-                vec![ListItem::new("No operations queued")]
+                vec![
+                    ListItem::new("No operations queued"),
+                    ListItem::new(""),
+                    ListItem::new("Select files and press:"),
+                    ListItem::new("• s = snake_case"),
+                    ListItem::new("• c = clean spaces"),
+                    ListItem::new("• t = Title Case"),
+                    ListItem::new("• K = kebab-case"),
+                    ListItem::new("• o = group files"),
+                    ListItem::new("• O = flatten dirs"),
+                ]
             };
-            
+
             let queue = List::new(queue_content)
-                .block(Block::default().borders(Borders::ALL).title("Queue"))
+                .block(Block::default().borders(Borders::ALL).title("Operations Queue"))
                 .style(Style::default().fg(Color::White));
             frame.render_widget(queue, main_chunks[1]);
 
-            // Status bar
-            let status_text = format!("Mode: {} | {} | Ctrl+Q: Quit, ?: Help", mode, status_message);
+            // Status bar with navigation and action help
+            let nav_help = match self.mode {
+                AppMode::Normal => "j/k: Navigate | Enter: Dir/Add to Queue | h: Back | l: Enter Dir | Actions: s=Snake c=Clean t=Title K=Kebab | v: Visual | x: Execute | q: Clear Queue | ?: Help | Ctrl+Q: Quit",
+                AppMode::Visual => "j/k: Extend selection | Enter: Apply to Selection | Esc: Normal mode | Available actions: s c t K o O | ?: Help",
+                AppMode::Help => "Press ESC, ?, or q to exit help mode",
+                _ => "j/k: Navigate | Enter: select | h: back | l: forward | ?: Help",
+            };
+            let status_text = format!("Mode: {} | {} | {}", mode, status_message, nav_help);
             let status = Paragraph::new(status_text)
                 .block(Block::default().borders(Borders::ALL))
                 .style(Style::default().fg(Color::Yellow))
                 .wrap(Wrap { trim: true });
             frame.render_widget(status, chunks[2]);
+
+            // Render help overlay if in help mode
+            if matches!(self.mode, AppMode::Help) {
+                use ratatui::{
+                    layout::Alignment,
+                    widgets::{Clear, Paragraph},
+                };
+
+                // Create a centered help popup
+                let help_area = ratatui::layout::Rect {
+                    x: size.width / 6,
+                    y: size.height / 8,
+                    width: size.width * 2 / 3,
+                    height: size.height * 3 / 4,
+                };
+
+                // Clear the area first
+                frame.render_widget(Clear, help_area);
+
+                let help_text = "
+🔧 SMV Terminal UI - Help & Actions
+
+📁 NAVIGATION:
+  j, ↓    - Move down in file list
+  k, ↑    - Move up in file list
+  h, ←    - Go back to parent directory
+  l, →    - Enter selected directory
+  Enter   - Enter directory OR add file to queue
+  gg      - Go to first item
+  G       - Go to last item
+
+🎯 FILE TRANSFORMATION ACTIONS:
+  s       - Convert to snake_case (my_file.txt)
+  c       - Clean up spaces & special chars
+  t       - Convert to Title Case (My File.txt)
+  K       - Convert to kebab-case (my-file.txt)
+
+📂 DIRECTORY OPERATIONS:
+  o       - Group files by basename into directories
+  O       - Flatten directory (move all files to root)
+
+👁️ MODES:
+  v       - Enter Visual mode (select multiple files)
+  :       - Enter Command mode
+  Esc     - Return to Normal mode
+
+⚡ QUEUE OPERATIONS:
+  x       - Execute all queued operations
+  q       - Clear the operation queue
+
+🔍 OTHER:
+  f       - Fuzzy search (if available)
+  /       - Start search
+
+🚪 EXIT:
+  Ctrl+Q  - Quit application
+  ?       - Toggle this help screen
+
+Press ESC, ?, or q to close this help.
+";
+
+                let help_popup = Paragraph::new(help_text)
+                    .block(Block::default()
+                        .borders(Borders::ALL)
+                        .title(" Help - SMV Actions & Navigation ")
+                        .title_alignment(Alignment::Center))
+                    .style(Style::default().fg(Color::White).bg(Color::DarkGray))
+                    .alignment(Alignment::Left)
+                    .wrap(Wrap { trim: true });
+
+                frame.render_widget(help_popup, help_area);
+            }
         })?;
         Ok(())
     }
@@ -539,14 +769,16 @@ impl App {
 impl UserInterface for App {
     fn run(&mut self) -> Result<(), Box<dyn Error>> {
         // Force initial render
-        self.render().map_err(|e| format!("Initial render failed: {}", e))?;
-        
+        self.render()
+            .map_err(|e| format!("Initial render failed: {}", e))?;
+
         // Main event loop
         while !self.should_exit {
             // Handle events first to avoid blocking on render
             match self.tui.next_event() {
                 Ok(Event::Key(key)) => {
-                    self.handle_key_event(key).map_err(|e| format!("Key event handling failed: {}", e))?;
+                    self.handle_key_event(key)
+                        .map_err(|e| format!("Key event handling failed: {}", e))?;
                 }
                 Ok(Event::Resize(_, _)) => {
                     // Terminal was resized, redraw on next iteration

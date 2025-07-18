@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod file_operations_tests {
+    use smv::transformers::{transform, TransformType};
     use std::fs;
     use std::path::Path;
     use tempfile::tempdir;
-    use smv::transformers::{transform, TransformType};
 
     #[test]
     fn test_transform_with_extensions() {
@@ -13,7 +13,7 @@ mod file_operations_tests {
         // Create test files with different extensions
         let test_files = vec![
             "document.txt",
-            "image.jpg", 
+            "image.jpg",
             "notes.md",
             "script.py",
             "data.csv",
@@ -28,12 +28,16 @@ mod file_operations_tests {
         // Test that transform preserves file extensions correctly
         for file in &test_files {
             let transformed = transform(file, &TransformType::Snake);
-            
+
             // Check that extension is preserved (if it exists)
             if let Some(original_ext) = Path::new(file).extension() {
                 let transformed_ext = Path::new(&transformed).extension();
-                assert_eq!(original_ext, transformed_ext.unwrap(), 
-                    "Extension not preserved for file: {}", file);
+                assert_eq!(
+                    original_ext,
+                    transformed_ext.unwrap(),
+                    "Extension not preserved for file: {}",
+                    file
+                );
             }
         }
     }
@@ -42,15 +46,31 @@ mod file_operations_tests {
     fn test_transform_edge_cases() {
         let test_cases = vec![
             // (input, transform_type, expected_output)
-            ("", TransformType::Snake, ""), // Empty string
+            ("", TransformType::Snake, ""),  // Empty string
             (".", TransformType::Snake, ""), // Just dot - gets filtered out as empty token
             (".hidden", TransformType::Snake, "hidden"), // Hidden file - no extension
-            ("file.", TransformType::Snake, "file"), // Ends with dot - no extension  
+            ("file.", TransformType::Snake, "file"), // Ends with dot - no extension
             ("ALLCAPS.TXT", TransformType::Snake, "allcaps.txt"), // All caps with extension
-            ("mixed.Case.File.txt", TransformType::Snake, "mixed_case_file.txt"), // Multiple dots with extension
-            ("file with spaces.txt", TransformType::Snake, "file_with_spaces.txt"), // Spaces with extension
-            ("file-with-dashes.txt", TransformType::Snake, "file_with_dashes.txt"), // Dashes with extension
-            ("file_with_underscores.txt", TransformType::Snake, "file_with_underscores.txt"), // Already snake case
+            (
+                "mixed.Case.File.txt",
+                TransformType::Snake,
+                "mixed_case_file.txt",
+            ), // Multiple dots with extension
+            (
+                "file with spaces.txt",
+                TransformType::Snake,
+                "file_with_spaces.txt",
+            ), // Spaces with extension
+            (
+                "file-with-dashes.txt",
+                TransformType::Snake,
+                "file_with_dashes.txt",
+            ), // Dashes with extension
+            (
+                "file_with_underscores.txt",
+                TransformType::Snake,
+                "file_with_underscores.txt",
+            ), // Already snake case
         ];
 
         for (input, transform_type, expected) in test_cases {
@@ -71,7 +91,11 @@ mod file_operations_tests {
 
         for (input, transform_type, expected) in test_cases {
             let result = transform(input, &transform_type);
-            assert_eq!(result, expected, "Unicode transform failed for input: '{}'", input);
+            assert_eq!(
+                result, expected,
+                "Unicode transform failed for input: '{}'",
+                input
+            );
         }
     }
 
@@ -86,12 +110,13 @@ mod file_operations_tests {
 
         // Create file that would conflict with transformation
         let conflicting_file = temp_path.join("original_file.txt");
-        fs::write(&conflicting_file, "conflicting content").expect("Failed to create conflicting file");
+        fs::write(&conflicting_file, "conflicting content")
+            .expect("Failed to create conflicting file");
 
         // Test that we can detect the conflict exists
         let transformed_name = transform("Original File.txt", &TransformType::Snake);
         assert_eq!(transformed_name, "original_file.txt");
-        
+
         // Both files should exist, indicating a potential conflict
         assert!(original_file.exists());
         assert!(conflicting_file.exists());
@@ -102,7 +127,7 @@ mod file_operations_tests {
         let filenames = vec![
             "document.txt",
             "image.jpg",
-            "notes.md", 
+            "notes.md",
             "script.py",
             "no_extension",
             ".hidden",
@@ -114,7 +139,7 @@ mod file_operations_tests {
             let path = Path::new(filename);
             if let Some(ext) = path.extension() {
                 let ext_str = ext.to_string_lossy().to_lowercase();
-                
+
                 // Basic validation that extensions are extracted correctly
                 match filename {
                     f if f.contains(".txt") => assert_eq!(ext_str, "txt"),

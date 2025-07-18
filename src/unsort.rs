@@ -1,7 +1,7 @@
 use anyhow::Result;
 use chrono::Local;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use walkdir::WalkDir;
 
 /// Moves all files from subdirectories into the root directory
@@ -47,9 +47,7 @@ pub fn remove_empty_dirs(root: &str, dry_run: bool) -> Result<()> {
     }
 
     // Sort directories by depth (deepest first)
-    dirs.sort_by(|a, b| {
-        b.components().count().cmp(&a.components().count())
-    });
+    dirs.sort_by(|a, b| b.components().count().cmp(&a.components().count()));
 
     // Process directories from deepest to shallowest
     for path in dirs {

@@ -1,7 +1,6 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::Style,
     widgets::{Block, StatefulWidget, Widget},
 };
 

@@ -1,0 +1,439 @@
+.TH SMV 1 "2025" "SMV" "CNP Ecosystem Tools"
+.SH NAME
+smv \- smart move and rename tool with CNP grammar support
+.SH SYNOPSIS
+.B smv
+.RI [ COMMAND ]
+.RI [ PATH ]
+.RI [ FILTERS ]
+.RI [ ROUTES ]
+.RI [ FLAGS ]
+.br
+.B smv
+.RI [ options ]
+.RI [ files ]
+.SH DESCRIPTION
+.B SMV
+(Smart Move) is a powerful file operation tool that extends the functionality of the standard Unix
+.BR mv (1)
+command with intelligent filename transformations and full CNP (Canopy) ecosystem integration.
+
+SMV operates in two modes:
+.TP
+.B CNP Grammar Mode
+Advanced operations using CNP filters, routes, and tool delegation
+.TP
+.B Legacy Mode
+Drop-in replacement for standard
+.BR mv (1)
+command
+.SH CNP GRAMMAR MODE
+.SS Basic Syntax
+.B smv
+.I <COMMAND>
+.I <PATH>
+.RI [ FILTERS ]
+.RI [ ROUTES ]
+.RI [ FLAGS ]
+.SS Commands
+.TP
+.B snake
+Convert filenames to snake_case
+.TP
+.B kebab
+Convert filenames to kebab-case
+.TP
+.B pascal
+Convert filenames to PascalCase
+.TP
+.B camel
+Convert filenames to camelCase
+.TP
+.B title
+Convert filenames to Title Case
+.TP
+.B lower
+Convert filenames to lowercase
+.TP
+.B upper
+Convert filenames to UPPERCASE
+.TP
+.B clean
+Clean up spaces and special characters
+.TP
+.B CHANGE
+.I "old"
+.B INTO
+.I "new"
+Replace substring in filenames
+.TP
+.B REGEX
+.I "pattern"
+.B INTO
+.I "replacement"
+Replace using regex
+.SS Filters
+.TP
+.BI NAME: value
+Match filenames containing value
+.TP
+.BI TYPE: file|folder|symlink|other
+Filter by file type
+.TP
+.BI EXT: extension
+Filter by file extension (e.g., EXT:md)
+.TP
+.BI SIZE> value
+.TQ
+.BI SIZE< value
+Filter by file size (e.g., SIZE>1MB, SIZE<500KB)
+.TP
+.BI DEPTH> value
+.TQ
+.BI DEPTH< value
+Filter by directory depth
+.TP
+.BI MODIFIED> date
+.TQ
+.BI MODIFIED< date
+Filter by modification date (YYYY-MM-DD)
+.TP
+.BI ACCESSED> date
+.TQ
+.BI ACCESSED< date
+Filter by access date (YYYY-MM-DD)
+.SS Semantic Groups
+.TP
+.B FOR:notes
+Markdown, text, and documentation files
+.TP
+.B FOR:media
+Images, videos, and audio files
+.TP
+.B FOR:scripts
+Shell, Python, Rust, and other script files
+.TP
+.B FOR:projects
+Source directories and project folders
+.TP
+.B FOR:configs
+Configuration files (yaml, json, toml, etc.)
+.SS Routes
+.TP
+.BI TO: tool
+Delegate operation to another CNP tool
+.RS
+.TP
+.B TO:say
+Use SAY for natural language processing
+.TP
+.B TO:dff
+Use DFF for duplicate file finding
+.TP
+.B TO:xfd
+Use XFD for interactive selection
+.TP
+.B TO:dsc
+Use DSC for ultra-fast discovery
+.RE
+.TP
+.BI INTO: filename
+Save output to file
+.TP
+.BI FORMAT: type
+Format output (json, csv, yaml, text)
+.SS Flags
+.TP
+.B \-r
+Recursive (process subdirectories)
+.TP
+.B \-p
+Preview (show changes without applying)
+.TP
+.B \-f
+Force (skip confirmations)
+.TP
+.B \-i
+Interactive mode
+.TP
+.B \-T
+Terminal UI mode
+.TP
+.B \-u
+Undo last operation
+.SH LEGACY MODE OPTIONS
+.TP
+.BR \-i ", " \-\-interactive
+Launch interactive REPL interface
+.TP
+.BR \-p ", " \-\-preview
+Preview changes without applying them
+.TP
+.BR \-r ", " \-\-recursive
+Process subdirectories recursively
+.TP
+.BR \-f ", " \-\-force
+Skip confirmations
+.TP
+.BR \-T ", " \-\-tui
+Launch terminal UI mode
+.TP
+.BR \-u ", " \-\-undo
+Undo the last operation
+.TP
+.BI \-\-exclude " PATTERNS"
+Comma-separated patterns to exclude
+.TP
+.BI \-\-max\-history\-size " SIZE"
+Maximum number of operations in history (default: 50)
+.TP
+.BR \-h ", " \-\-help
+Print help information
+.TP
+.BR \-V ", " \-\-version
+Print version information
+.SH EXAMPLES
+.SS Basic Transformations
+.TP
+Convert markdown files to snake_case with preview:
+.B smv snake . EXT:md \-p
+.TP
+Clean up media filenames recursively:
+.B smv clean . FOR:media \-r
+.TP
+Convert config files to title case:
+.B smv title . FOR:configs \-p
+.SS Advanced Filtering
+.TP
+Transform large text files only:
+.B smv kebab . TYPE:file EXT:txt SIZE>1MB \-p
+.TP
+Process recently modified scripts:
+.B smv clean . FOR:scripts MODIFIED>2024\-01\-01 \-r
+.TP
+Work with specific filename patterns:
+.B smv pascal . NAME:draft TYPE:file \-p
+.SS Tool Delegation
+.TP
+Use SAY for complex word segmentation:
+.B smv snake . EXT:epub TO:say split_and_titlecase
+.TP
+Find duplicates with DFF:
+.B smv organize . FOR:media TO:dff find_duplicates
+.TP
+Interactive selection with XFD:
+.B smv clean . TYPE:file TO:xfd interactive_select
+.SS Output Routing
+.TP
+Save file list to text file:
+.B smv clean . FOR:scripts INTO:cleaned_files.txt
+.TP
+Output results as JSON:
+.B smv title . TYPE:file FORMAT:json \-p
+.TP
+Generate CSV report with file metadata:
+.B smv snake . EXT:md FORMAT:csv
+.SS String Replacement
+.TP
+Replace substring in filenames:
+.B smv CHANGE "old" INTO "new" . \-p
+.TP
+Use regex for complex patterns:
+.B smv REGEX "\\\\d+" INTO "XXX" . \-r
+.SS Legacy Mode
+.TP
+Move files (standard mv behavior):
+.B smv file.txt /path/to/destination/
+.TP
+Rename files:
+.B smv old_name.txt new_name.txt
+.TP
+Move multiple files:
+.B smv file1.txt file2.txt destination_directory/
+.SH FILE TRANSFORMATIONS
+.TS
+tab(|);
+l l l.
+Transform|Description|Example
+_
+clean|Clean up spaces and special characters|T{
+.ad l
+My File (1).txt → My File 1.txt
+T}
+snake|Convert to snake_case|T{
+.ad l
+My-File.txt → my_file.txt
+T}
+kebab|Convert to kebab-case|T{
+.ad l
+My_File.txt → my-file.txt
+T}
+title|Convert to Title Case|T{
+.ad l
+my_file.txt → My File.txt
+T}
+camel|Convert to camelCase|T{
+.ad l
+my_file.txt → myFile.txt
+T}
+pascal|Convert to PascalCase|T{
+.ad l
+my_file.txt → MyFile.txt
+T}
+lower|Convert to lowercase|T{
+.ad l
+MyFile.txt → myfile.txt
+T}
+upper|Convert to UPPERCASE|T{
+.ad l
+myFile.txt → MYFILE.TXT
+T}
+.TE
+.SH SIZE UNITS
+Size filters support the following units:
+.TP
+.B B
+Bytes
+.TP
+.B KB
+Kilobytes (1024 bytes)
+.TP
+.B MB
+Megabytes (1024 KB)
+.TP
+.B GB
+Gigabytes (1024 MB)
+.TP
+.B TB
+Terabytes (1024 GB)
+.P
+Examples: SIZE>1MB, SIZE<500KB, SIZE>2GB
+.SH DATE FORMATS
+Date filters use YYYY-MM-DD format:
+.TP
+.B MODIFIED>2024\-01\-01
+Files modified after January 1, 2024
+.TP
+.B ACCESSED<2023\-12\-31
+Files accessed before December 31, 2023
+.SH INTERACTIVE MODES
+.SS REPL Interface
+Launch the interactive Read-Eval-Print Loop:
+.P
+.B smv \-i
+.P
+Commands available in REPL:
+.TP
+.BI ls " [pattern]"
+List files
+.TP
+.BI cd " directory"
+Change directory
+.TP
+.BI preview " transform files"
+Show transformation preview
+.TP
+.BI apply " transform files"
+Apply transformation
+.TP
+.B undo
+Revert last operation
+.TP
+.B help
+Show help
+.TP
+.B quit
+Exit program
+.SS Terminal UI Mode
+Launch the full-screen terminal interface:
+.P
+.B smv \-T
+.P
+Features:
+.IP \(bu 2
+File explorer with Vim-style navigation (hjkl, gg, G)
+.IP \(bu 2
+Visual selection mode for multiple files
+.IP \(bu 2
+Fuzzy search integration
+.IP \(bu 2
+Operation queue with preview
+.IP \(bu 2
+Real-time transformation preview
+.SH SAFETY FEATURES
+.SS Backups
+SMV automatically creates backups of modified files in
+.IR ~/.config/smv/backups/ .
+This enables the undo functionality to work across program sessions.
+.SS Conflict Detection
+SMV will not overwrite existing files unless explicitly instructed, preventing accidental data loss.
+.SS Undo Functionality
+.TP
+Command-line undo:
+.B smv \-u
+.TP
+REPL undo:
+.B smv> undo
+.TP
+Interactive mode undo:
+.B smv \-i
+.br
+.B smv> undo
+.SH CNP ECOSYSTEM INTEGRATION
+SMV is part of the CNP (Canopy) ecosystem and integrates with:
+.IP \(bu 2
+.B DSC
+\- Ultra-fast file discovery (replaces find/fd)
+.IP \(bu 2
+.B XFD
+\- Interactive fuzzy search (replaces fzf/skim)
+.IP \(bu 2
+.B SAY
+\- Natural language processing and grammar translation
+.IP \(bu 2
+.B DFF
+\- Duplicate file finder
+.IP \(bu 2
+.B SKL
+\- Advanced search and pattern matching (replaces grep/ripgrep)
+.P
+Tool delegation allows SMV to leverage specialized capabilities:
+.TP
+Use SAY for intelligent word boundary detection:
+.B smv snake . EXT:epub TO:say split_and_titlecase
+.TP
+Use DFF for duplicate detection before organizing:
+.B smv organize . FOR:media TO:dff find_duplicates
+.SH FILES
+.TP
+.I ~/.config/smv/backups/
+Automatic file backups for undo functionality
+.TP
+.I ~/.config/smv/history
+Command history for interactive mode
+.SH EXIT STATUS
+SMV exits with status:
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error
+.TP
+.B 2
+Parse error
+.TP
+.B 3
+File operation error
+.SH SEE ALSO
+.BR mv (1),
+.BR find (1),
+.BR rename (1),
+.BR dsc (1),
+.BR xfd (1)
+.SH AUTHOR
+SMV is part of the CNP (Canopy) ecosystem developed as a modern file operation suite.
+.SH REPORTING BUGS
+Report bugs to the SMV issue tracker.
+.SH COPYRIGHT
+This is free software; see the source for copying conditions.

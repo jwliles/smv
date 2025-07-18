@@ -1,119 +1,263 @@
-# Contributing to AFN Projects
+# Contributing Guide
 
-This document outlines the contribution guidelines for all AFN projects. Following these standards ensures code quality, maintainability, and project consistency.
+Thank you for your interest in contributing! This document outlines the development workflow, style guide, and expectations for contributors across all tools in the Canopy (CNP) suite.
 
-## Gitflow Workflow
+---
 
-We follow the Gitflow workflow for all AFN projects:
+## 📌 Code of Conduct
 
-1. **Main Branch**: Always contains production-ready code
-   - Never commit directly to main
-   - Protected by requiring pull request reviews
+By participating in this project, you agree to foster a respectful, inclusive, and collaborative environment.
 
-2. **Develop Branch**: Integration branch for features
-   - All feature branches merge into develop
-   - Should be in a working state at all times
+For full behavioral expectations, please see our [Code of Conduct](CODE_OF_CONDUCT.md).
 
-3. **Feature Branches**: Where new features are developed
-   - Branch from: `develop`
-   - Name format: `feature/short-description`
-   - Merge back into: `develop` (via pull request)
+---
 
-4. **Release Branches**: Prepare for production releases
-   - Branch from: `develop`
-   - Name format: `release/x.y.z`
-   - Merge back into: `main` AND `develop` (when finalized)
-   - Only bug fixes, documentation and release-oriented tasks
+## Git Workflow
 
-5. **Hotfix Branches**: Emergency fixes for production
-   - Branch from: `main`
-   - Name format: `hotfix/x.y.z` or `hotfix/issue-description`
-   - Merge back into: `main` AND `develop`
+We follow a GitFlow-style branching strategy across all projects:
 
-6. **Pull Requests**:
-   - Required for merging into `main` and `develop`
-   - Must pass all checks (tests, linting)
-   - Require at least one code review approval
+### Main Branches
 
-## Testing Requirements
+* `main` – Stable production code. Only updated via release branches or hotfixes.
+* `develop` – Active development. Feature branches are merged here.
 
-All code contributions must include tests:
+### Supporting Branches
 
-1. **Test Coverage**:
-   - Write tests for all new functionality
-   - Maintain or improve the project's test coverage percentage
-   - No pull requests will be approved with failing tests
+* `feature/short-description` – New features (branched from `develop`)
+* `bugfix/short-description` – Bug fixes (branched from `develop`)
+* `hotfix/short-description` – Emergency fixes (branched from `main`, merged into both `main` and `develop`)
+* `release/x.y.z` – Prepares the next version (branched from `develop`, merged into both `main` and `develop`)
 
-2. **Test Types**:
-   - **Unit Tests**: Test individual functions and methods
-   - **Integration Tests**: Test interactions between components
-   - **End-to-End Tests**: Test complete user workflows (when applicable)
+### Branch Naming Convention
 
-3. **Test-Driven Development**:
-   - Write tests before implementing features when possible
-   - Tests should verify both expected functionality and edge cases
+Use hyphenated lowercase names:
 
-4. **Running Tests**:
-   - All tests must pass locally before submitting a PR
-   - CI pipeline will verify tests on each PR
+```bash
+git checkout -b feature/add-syntax-highlighting develop
+```
 
-## Documentation Standards
+---
 
-Code must be well-documented:
+## ✅ Contribution Checklist
 
-1. **Code Comments**:
-   - Add descriptive comments for non-obvious code
-   - Document public APIs thoroughly
-   - Explain complex algorithms or business logic
-   - Use standard documentation formats (e.g., rustdoc for Rust projects)
+Before opening a pull request:
 
-2. **Function Documentation**:
-   - Document parameters, return values, and errors
-   - Include examples where appropriate
-   - Explain side effects or preconditions
+1. ✅ Code builds and runs without errors
+2. ✅ All tests pass locally
+3. ✅ Code is formatted: `cargo fmt`
+4. ✅ Linting passes: `cargo clippy`
+5. ✅ You’ve written or updated tests
+6. ✅ You’ve updated documentation where needed
+7. ✅ Commit messages follow conventions (see below)
+8. ✅ Pull request description explains the change and links relevant issues
 
-3. **Module/Package Documentation**:
-   - Include module-level documentation explaining purpose and contents
-   - Document usage patterns and examples
+---
 
-4. **Project Documentation**:
-   - Maintain up-to-date README.md with:
-     - Project overview
-     - Installation instructions
-     - Basic usage examples
-   - Include CHANGELOG.md for tracking version changes
+## 🧺 Testing Standards
 
-5. **Documentation Updates**:
-   - Update documentation when changing existing code
-   - Documentation changes should be part of the same PR as code changes
+* All new code **must** include appropriate unit tests
+* **All CLI flags, subcommands, and options must be tested**. If users can type it, we must test it.
+* Maintain or improve overall test coverage:
 
-## Code Style and Quality
+  * CLI behavior: **100%** test coverage expected
+  * Logic-level code: **80% minimum**
+* Run coverage check:
 
-1. **Linting and Formatting**:
-   - Follow project-specific linting rules
-   - Use automated formatting tools
-   - PRs must pass all linting checks
+  ```bash
+  cargo tarpaulin --out Html
+  # or
+  cargo llvm-cov --workspace --html
+  ```
 
-2. **Code Reviews**:
-   - All code must be reviewed before merging
-   - Address review comments promptly
-   - Reviewers should check for adherence to these guidelines
+### Test Types
 
-3. **Commit Messages**:
-   - Write clear, descriptive commit messages
-   - Format: `type(scope): short description`
-   - Types: feat, fix, docs, style, refactor, test, chore
-   - Reference issue numbers when applicable
+* **Unit Tests**: Single-function or module-level logic
+* **Integration Tests**: Modules working together
+* **E2E Tests** (optional): End-user workflows
 
-## Getting Started
+### CLI Testing Tools
 
-1. Fork the repository
-2. Clone your fork locally
-3. Set up the development environment following README instructions
-4. Create a feature branch from `develop`
-5. Make your changes, adhering to guidelines
-6. Write or update tests
-7. Update documentation
-8. Submit a pull request
+Use [`assert_cmd`](https://docs.rs/assert_cmd), [`clap::Command::debug_assert`](https://docs.rs/clap/latest/clap/struct.Command.html#method.debug_assert), and similar tools to test CLI surfaces.
 
-Thank you for contributing to AFN projects!
+```rust
+use assert_cmd::Command;
+
+#[test]
+fn runs_with_verbose_flag() {
+    let mut cmd = Command::cargo_bin("your_tool").unwrap();
+    cmd.arg("--verbose").assert().success();
+}
+```
+
+---
+
+## 🔄 CI/CD Standards
+
+All pull requests are validated with CI using GitHub Actions:
+
+* Format: `cargo fmt --check`
+* Lint: `cargo clippy -- -D warnings`
+* Test: `cargo test`
+* Coverage: `cargo llvm-cov` or `cargo tarpaulin`
+* Build: `cargo build --release`
+
+---
+
+## 🧹 Code Style
+
+* Follow Rust’s official guidelines
+* Use idiomatic Rust
+* Run formatters and linters:
+
+  ```bash
+  cargo fmt
+  cargo clippy
+  ```
+* Follow project-specific conventions where applicable (e.g., naming, module layout)
+
+---
+
+## 📜 Commit Message Convention
+
+Use conventional commits:
+
+```
+type(scope): short description
+```
+
+**Types**:
+
+* `feat` – New features
+* `fix` – Bug fixes
+* `docs` – Documentation only
+* `style` – Formatting, no code change
+* `refactor` – Code changes that aren’t fixes/features
+* `test` – Adding or updating tests
+* `chore` – Build or tool changes
+
+**Example**:
+
+```bash
+git commit -m "feat(parser): add support for nested syntax blocks"
+```
+
+---
+
+## 📤 Publishing & Releases
+
+(For crates with release support)
+
+### Versioning
+
+Follow [Semantic Versioning](https://semver.org):
+
+* **Patch** (0.1.0 → 0.1.1): Fixes
+* **Minor** (0.1.0 → 0.2.0): New non-breaking features
+* **Major** (0.x.x → 1.0.0): Breaking changes
+
+### Publishing Process
+
+```bash
+# 1. Update version in Cargo.toml
+# 2. Update CHANGELOG.md
+git commit -m "chore: bump version to 0.4.0"
+git tag -a v0.4.0 -m "Version 0.4.0"
+git push && git push --tags
+cargo publish
+```
+
+---
+
+## 📚 Documentation
+
+Update the following when you add or change features:
+
+* `README.md`
+* Public API doc comments (`///`)
+* Example/test files
+* Syntax/reference documentation (if applicable)
+* `CHANGELOG.md`
+
+All code should include:
+
+* Function and argument documentation
+* Return values and side effects
+* Usage examples for complex functions
+
+### Good vs. Poor Documentation Examples
+
+**Good:**
+
+````rust
+/// Calculates the area of a circle.
+///
+/// # Arguments
+/// * `radius` - A floating-point number representing the radius.
+///
+/// # Returns
+/// The area as `f64`.
+///
+/// # Example
+/// ```
+/// let a = circle_area(2.0);
+/// assert_eq!(a, 12.566);
+/// ```
+````
+
+**Poor:**
+
+```rust
+// calc circle
+fn c(r: f64) -> f64 {
+```
+
+---
+
+## 🧺 Development Setup
+
+To get started:
+
+```bash
+# Fork and clone
+git clone https://github.com/YOUR_USERNAME/project-name
+cd project-name
+
+# Setup
+cargo build
+cargo test
+```
+
+Create a branch:
+
+```bash
+git checkout -b feature/my-new-feature develop
+```
+
+---
+
+## ❓ Merge Conflicts & Troubleshooting
+
+* Always pull the latest changes before merging:
+
+  ```bash
+  git pull origin develop
+  ```
+* Resolve conflicts manually and commit resolved state
+* Run tests again after resolving conflicts
+
+If you encounter setup issues, check the `README.md` or open an issue for help.
+
+---
+
+## ⏳ Pull Request Reviews
+
+* PRs should include a clear description of the changes
+* Link to related issues when possible
+* Expect a response within 3 business days
+* Be open to constructive feedback and iterate as needed
+
+---
+
+## 🙏 Thank You!
+
+Your contributions help make this project better. Whether it’s reporting bugs, suggesting improvements, writing docs, or submitting code — we’re glad to have you involved.

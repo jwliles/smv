@@ -39,7 +39,7 @@ pub enum UiAction {
 }
 
 /// Transform action for UI operations
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum TransformAction {
     Snake,
     Kebab,

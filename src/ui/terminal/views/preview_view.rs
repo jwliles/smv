@@ -88,12 +88,14 @@ impl PreviewView {
             TransformType::Clean => {
                 transformers::transform(filename, &transformers::TransformType::Clean)
             }
-            TransformType::Replace(find, replace) => {
-                transformers::transform(filename, &transformers::TransformType::Replace(find.clone(), replace.clone()))
-            }
-            TransformType::ReplaceRegex(pattern, replacement) => {
-                transformers::transform(filename, &transformers::TransformType::ReplaceRegex(pattern.clone(), replacement.clone()))
-            }
+            TransformType::Replace(find, replace) => transformers::transform(
+                filename,
+                &transformers::TransformType::Replace(find.clone(), replace.clone()),
+            ),
+            TransformType::ReplaceRegex(pattern, replacement) => transformers::transform(
+                filename,
+                &transformers::TransformType::ReplaceRegex(pattern.clone(), replacement.clone()),
+            ),
         }
     }
 }
