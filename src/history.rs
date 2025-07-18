@@ -28,15 +28,21 @@ pub struct HistoryManager {
     operations: Vec<Operation>,
     max_history_size: usize,
     backup_directory: PathBuf,
+    history_file: PathBuf,
 }
 
 impl HistoryManager {
     pub fn new(max_history_size: usize, backup_directory: &Path) -> Self {
-        Self {
+        let history_file = backup_directory.join("history.json");
+        let mut manager = Self {
             operations: Vec::with_capacity(max_history_size),
             max_history_size,
             backup_directory: backup_directory.to_path_buf(),
-        }
+            history_file,
+        };
+        // Load existing history from file
+        let _ = manager.load_history();
+        manager
     }
 
     /// Record a new operation
@@ -55,14 +61,33 @@ impl HistoryManager {
             self.operations.remove(0);
         }
 
+        // Save history to file
+        self.save_history()?;
+
         Ok(())
     }
 
     /// Undo the last operation
     pub fn undo(&mut self) -> Result<(), Box<dyn Error>> {
         if let Some(operation) = self.operations.pop() {
+            // Check if this was a file creation operation (source is empty)
+            if operation.source.as_os_str().is_empty() {
+                // This was a file creation - delete the created file
+                if operation.destination.exists() {
+                    fs::remove_file(&operation.destination)?;
+                    println!(
+                        "Undone: Deleted created file '{}'",
+                        operation.destination.display()
+                    );
+                } else {
+                    println!(
+                        "File '{}' was already deleted or doesn't exist",
+                        operation.destination.display()
+                    );
+                }
+            }
             // If the destination exists, move it back to source
-            if operation.destination.exists() {
+            else if operation.destination.exists() {
                 fs::rename(&operation.destination, &operation.source)?;
                 println!(
                     "Undone: Moved '{}' back to '{}'",
@@ -78,6 +103,8 @@ impl HistoryManager {
                     operation.source.display()
                 );
             }
+            // Save updated history to file
+            self.save_history()?;
             Ok(())
         } else {
             Err("No operations to undo".into())
@@ -155,5 +182,37 @@ impl HistoryManager {
         } else {
             Err("No backup found for this file".into())
         }
+    }
+
+    /// Save history to disk
+    fn save_history(&self) -> Result<(), Box<dyn Error>> {
+        // Ensure the directory exists
+        if let Some(parent) = self.history_file.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Serialize operations to JSON
+        let json = serde_json::to_string_pretty(&self.operations)?;
+        fs::write(&self.history_file, json)?;
+
+        Ok(())
+    }
+
+    /// Load history from disk
+    fn load_history(&mut self) -> Result<(), Box<dyn Error>> {
+        if self.history_file.exists() {
+            let json = fs::read_to_string(&self.history_file)?;
+            let operations: Vec<Operation> = serde_json::from_str(&json)?;
+
+            // Only keep operations up to max_history_size
+            let start_index = if operations.len() > self.max_history_size {
+                operations.len() - self.max_history_size
+            } else {
+                0
+            };
+
+            self.operations = operations[start_index..].to_vec();
+        }
+        Ok(())
     }
 }

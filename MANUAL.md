@@ -239,10 +239,10 @@ smv> undo
 SMV is part of the CNP (Canopy) ecosystem and integrates with:
 
 - **DSC** - Ultra-fast file discovery (replaces find/fd)
-- **XFD** - Interactive fuzzy search (replaces fzf/skim)
+- **SKL** - Interactive fuzzy search (replaces fzf/skim)
+- **XFD** - Content search tool (replaces ripgrep)
 - **SAY** - Natural language processing and grammar translation
 - **DFF** - Duplicate file finder
-- **SKL** - Advanced search and pattern matching (replaces grep/ripgrep)
 
 Tool delegation allows SMV to leverage specialized capabilities:
 ```bash

@@ -11,6 +11,12 @@ pub struct QueueView {
     state: ListState,
 }
 
+impl Default for QueueView {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QueueView {
     /// Create a new queue view
     pub fn new() -> Self {

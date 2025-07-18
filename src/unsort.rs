@@ -20,7 +20,7 @@ pub fn flatten_directory(root: &str, dry_run: bool) -> Result<()> {
                 let timestamp = Local::now().format("%Y%m%d%H%M%S");
                 let base = path.file_stem().unwrap().to_string_lossy();
                 let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                final_target = Path::new(root).join(format!("{}_{}.{}", base, timestamp, ext));
+                final_target = Path::new(root).join(format!("{base}_{timestamp}.{ext}"));
             }
 
             println!("Moving {} → {}", path.display(), final_target.display());

@@ -7,7 +7,7 @@ use std::time::SystemTime;
 use colored::*;
 use walkdir::WalkDir;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FileOpConfig {
     pub recursive: bool,
     pub force: bool,
@@ -16,41 +16,16 @@ pub struct FileOpConfig {
     pub preserve_metadata: bool,
     pub dereference_symlinks: bool,
     pub follow_symlinks: bool,
+    pub verbose: bool,
 }
 
-impl Default for FileOpConfig {
-    fn default() -> Self {
-        Self {
-            recursive: false,
-            force: false,
-            no_clobber: false,
-            interactive: false,
-            preserve_metadata: false,
-            dereference_symlinks: false,
-            follow_symlinks: false,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FileOpStats {
     pub processed: u32,
     pub moved: u32,
     pub copied: u32,
     pub errors: u32,
     pub skipped: u32,
-}
-
-impl Default for FileOpStats {
-    fn default() -> Self {
-        Self {
-            processed: 0,
-            moved: 0,
-            copied: 0,
-            errors: 0,
-            skipped: 0,
-        }
-    }
 }
 
 pub fn move_files(
@@ -103,16 +78,22 @@ pub fn copy_files(
             destination.to_path_buf()
         };
 
-        if let Err(e) = copy_single_item(source, &dest_path, config) {
-            eprintln!(
-                "{}: Failed to copy {}: {}",
-                "Error".red(),
-                source.display(),
-                e
-            );
-            stats.errors += 1;
-        } else {
-            stats.copied += 1;
+        match copy_single_item(source, &dest_path, config) {
+            Ok(item_stats) => {
+                stats.copied += item_stats.copied;
+                stats.processed += item_stats.processed - 1; // -1 because we already counted this in the outer loop
+                stats.errors += item_stats.errors;
+                stats.skipped += item_stats.skipped;
+            }
+            Err(e) => {
+                eprintln!(
+                    "{}: Failed to copy {}: {}",
+                    "Error".red(),
+                    source.display(),
+                    e
+                );
+                stats.errors += 1;
+            }
         }
     }
 
@@ -133,10 +114,8 @@ fn move_single_item(
             return Ok(());
         }
 
-        if config.interactive {
-            if !prompt_overwrite(source, destination)? {
-                return Ok(());
-            }
+        if config.interactive && !prompt_overwrite(source, destination)? {
+            return Ok(());
         }
     }
 
@@ -144,7 +123,11 @@ fn move_single_item(
         if config.recursive {
             move_directory_recursive(source, destination, config)?;
         } else {
-            return Err(format!("Source is a directory, use -r flag for recursive move: {}", source.display()).into());
+            return Err(format!(
+                "Source is a directory, use -r flag for recursive move: {}",
+                source.display()
+            )
+            .into());
         }
     } else if source.is_file() {
         move_file(source, destination, config)?;
@@ -161,28 +144,39 @@ fn copy_single_item(
     source: &Path,
     destination: &Path,
     config: &FileOpConfig,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<FileOpStats, Box<dyn Error>> {
     if !source.exists() {
         return Err(format!("Source does not exist: {}", source.display()).into());
     }
 
     if destination.exists() && !config.force {
         if config.no_clobber {
-            return Ok(());
+            return Ok(FileOpStats {
+                processed: 1,
+                skipped: 1,
+                ..Default::default()
+            });
         }
 
-        if config.interactive {
-            if !prompt_overwrite(source, destination)? {
-                return Ok(());
-            }
+        if config.interactive && !prompt_overwrite(source, destination)? {
+            return Ok(FileOpStats {
+                processed: 1,
+                skipped: 1,
+                ..Default::default()
+            });
         }
     }
 
     if source.is_dir() {
         if config.recursive {
-            copy_directory_recursive(source, destination, config)?;
+            let recursive_stats = copy_directory_recursive(source, destination, config)?;
+            return Ok(recursive_stats);
         } else {
-            return Err(format!("Source is a directory, use -r flag for recursive copy: {}", source.display()).into());
+            return Err(format!(
+                "Source is a directory, use -r flag for recursive copy: {}",
+                source.display()
+            )
+            .into());
         }
     } else if source.is_file() {
         copy_file(source, destination, config)?;
@@ -192,7 +186,11 @@ fn copy_single_item(
         return Err(format!("Unsupported file type: {}", source.display()).into());
     }
 
-    Ok(())
+    Ok(FileOpStats {
+        processed: 1,
+        copied: 1,
+        ..Default::default()
+    })
 }
 
 fn move_file(
@@ -341,8 +339,9 @@ fn copy_directory_recursive(
     source: &Path,
     destination: &Path,
     config: &FileOpConfig,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<FileOpStats, Box<dyn Error>> {
     fs::create_dir_all(destination)?;
+    let mut total_stats = FileOpStats::default();
 
     for entry in WalkDir::new(source).min_depth(1).max_depth(1) {
         let entry = entry?;
@@ -350,9 +349,17 @@ fn copy_directory_recursive(
         let dest_path = destination.join(entry_path.file_name().unwrap_or_default());
 
         if entry_path.is_dir() {
-            copy_directory_recursive(entry_path, &dest_path, config)?;
+            let dir_stats = copy_directory_recursive(entry_path, &dest_path, config)?;
+            total_stats.processed += dir_stats.processed;
+            total_stats.copied += dir_stats.copied;
+            total_stats.errors += dir_stats.errors;
+            total_stats.skipped += dir_stats.skipped;
         } else {
-            copy_single_item(entry_path, &dest_path, config)?;
+            let file_stats = copy_single_item(entry_path, &dest_path, config)?;
+            total_stats.processed += file_stats.processed;
+            total_stats.copied += file_stats.copied;
+            total_stats.errors += file_stats.errors;
+            total_stats.skipped += file_stats.skipped;
         }
     }
 
@@ -360,7 +367,11 @@ fn copy_directory_recursive(
         preserve_metadata(source, destination)?;
     }
 
-    Ok(())
+    // Count the directory itself
+    total_stats.processed += 1;
+    total_stats.copied += 1;
+
+    Ok(total_stats)
 }
 
 fn preserve_metadata(source: &Path, destination: &Path) -> Result<(), Box<dyn Error>> {
@@ -391,7 +402,6 @@ fn preserve_metadata(source: &Path, destination: &Path) -> Result<(), Box<dyn Er
 fn set_file_times(path: &Path, atime: SystemTime, mtime: SystemTime) -> Result<(), Box<dyn Error>> {
     #[cfg(unix)]
     {
-        use std::os::unix::fs::MetadataExt;
         use std::time::UNIX_EPOCH;
 
         let atime_secs = atime.duration_since(UNIX_EPOCH)?.as_secs();
@@ -466,6 +476,94 @@ fn prompt_overwrite(source: &Path, destination: &Path) -> Result<bool, Box<dyn E
     Ok(matches!(response.as_str(), "y" | "yes"))
 }
 
+pub fn remove_files(
+    targets: &[PathBuf],
+    config: &FileOpConfig,
+) -> Result<FileOpStats, Box<dyn Error>> {
+    let mut stats = FileOpStats::default();
+
+    for target in targets {
+        stats.processed += 1;
+
+        if let Err(e) = remove_single_item(target, config) {
+            eprintln!(
+                "{}: Failed to remove {}: {}",
+                "Error".red(),
+                target.display(),
+                e
+            );
+            stats.errors += 1;
+        } else {
+            stats.moved += 1; // Use moved count for removed items
+        }
+    }
+
+    Ok(stats)
+}
+
+fn remove_single_item(target: &Path, config: &FileOpConfig) -> Result<(), Box<dyn Error>> {
+    if !target.exists() {
+        if !config.force {
+            return Err(format!("No such file or directory: {}", target.display()).into());
+        }
+        // With -f flag, silently ignore nonexistent files
+        return Ok(());
+    }
+
+    // Interactive prompt
+    if config.interactive && !prompt_remove(target)? {
+        return Ok(());
+    }
+
+    if target.is_dir() {
+        if config.recursive {
+            remove_directory_recursive(target, config)?;
+        } else {
+            return Err(format!(
+                "Is a directory: {} (use -r to remove directories)",
+                target.display()
+            )
+            .into());
+        }
+    } else {
+        fs::remove_file(target)?;
+        if config.verbose {
+            eprintln!("removed '{}'", target.display());
+        }
+    }
+
+    Ok(())
+}
+
+fn remove_directory_recursive(target: &Path, config: &FileOpConfig) -> Result<(), Box<dyn Error>> {
+    for entry in WalkDir::new(target).contents_first(true) {
+        let entry = entry?;
+        let entry_path = entry.path();
+
+        if entry_path.is_dir() {
+            fs::remove_dir(entry_path)?;
+        } else {
+            fs::remove_file(entry_path)?;
+        }
+
+        if config.verbose {
+            eprintln!("removed '{}'", entry_path.display());
+        }
+    }
+
+    Ok(())
+}
+
+fn prompt_remove(target: &Path) -> Result<bool, Box<dyn Error>> {
+    print!("remove {}? ", target.display());
+    io::stdout().flush()?;
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
+    Ok(input.trim().to_lowercase().starts_with('y'))
+}
+
 pub fn expand_glob_patterns(patterns: &[String]) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let mut expanded = Vec::new();
 
@@ -492,7 +590,7 @@ pub fn expand_glob_patterns(patterns: &[String]) -> Result<Vec<PathBuf>, Box<dyn
                 ),
             }
         } else {
-            return Err(format!("File or directory does not exist: {}", pattern).into());
+            return Err(format!("File or directory does not exist: {pattern}").into());
         }
     }
 
@@ -501,4 +599,171 @@ pub fn expand_glob_patterns(patterns: &[String]) -> Result<Vec<PathBuf>, Box<dyn
     }
 
     Ok(expanded)
+}
+
+pub fn create_files(
+    files: &[String],
+    verbose: bool,
+    access_time: Option<SystemTime>,
+    modify_time: Option<SystemTime>,
+) -> Result<FileOpStats, Box<dyn Error>> {
+    let mut stats = FileOpStats::default();
+
+    for file_path_str in files {
+        stats.processed += 1;
+
+        let file_path = PathBuf::from(file_path_str);
+
+        // Create parent directories if they don't exist
+        if let Some(parent) = file_path.parent() {
+            if !parent.exists() {
+                if let Err(e) = fs::create_dir_all(parent) {
+                    eprintln!(
+                        "{}: Failed to create parent directory for '{}': {}",
+                        "Error".red(),
+                        file_path.display(),
+                        e
+                    );
+                    stats.errors += 1;
+                    continue;
+                }
+            }
+        }
+
+        // Create or update the file
+        let file_existed = file_path.exists();
+        match fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&file_path)
+        {
+            Ok(_) => {
+                // Update timestamps if specified
+                if access_time.is_some() || modify_time.is_some() {
+                    let atime = access_time.unwrap_or_else(SystemTime::now);
+                    let mtime = modify_time.unwrap_or_else(SystemTime::now);
+
+                    if let Err(e) = set_file_times(&file_path, atime, mtime) {
+                        eprintln!(
+                            "{}: Failed to set timestamps for '{}': {}",
+                            "Warning".yellow(),
+                            file_path.display(),
+                            e
+                        );
+                    }
+                }
+
+                if verbose {
+                    if file_existed {
+                        eprintln!("touch '{}'", file_path.display());
+                    } else {
+                        eprintln!("created '{}'", file_path.display());
+                    }
+                }
+                stats.moved += 1; // Using moved count for created/touched files
+            }
+            Err(e) => {
+                eprintln!(
+                    "{}: Failed to create/touch file '{}': {}",
+                    "Error".red(),
+                    file_path.display(),
+                    e
+                );
+                stats.errors += 1;
+            }
+        }
+    }
+
+    Ok(stats)
+}
+
+pub fn create_directories(
+    directories: &[String],
+    create_parents: bool,
+    mode: Option<u32>,
+    verbose: bool,
+) -> Result<FileOpStats, Box<dyn Error>> {
+    let mut stats = FileOpStats::default();
+
+    for dir_path_str in directories {
+        stats.processed += 1;
+
+        let dir_path = PathBuf::from(dir_path_str);
+
+        if dir_path.exists() {
+            if dir_path.is_dir() {
+                if verbose {
+                    eprintln!("directory '{}' already exists", dir_path.display());
+                }
+                stats.skipped += 1;
+            } else {
+                eprintln!(
+                    "{}: '{}' exists but is not a directory",
+                    "Error".red(),
+                    dir_path.display()
+                );
+                stats.errors += 1;
+            }
+            continue;
+        }
+
+        let result = if create_parents {
+            fs::create_dir_all(&dir_path)
+        } else {
+            fs::create_dir(&dir_path)
+        };
+
+        match result {
+            Ok(()) => {
+                // Set permissions if mode is specified
+                if let Some(mode_val) = mode {
+                    if let Err(e) = set_directory_mode(&dir_path, mode_val) {
+                        eprintln!(
+                            "{}: Failed to set mode for '{}': {}",
+                            "Warning".yellow(),
+                            dir_path.display(),
+                            e
+                        );
+                    }
+                }
+
+                if verbose {
+                    eprintln!("created directory '{}'", dir_path.display());
+                }
+                stats.moved += 1; // Using moved count for created directories
+            }
+            Err(e) => {
+                eprintln!(
+                    "{}: Failed to create directory '{}': {}",
+                    "Error".red(),
+                    dir_path.display(),
+                    e
+                );
+                stats.errors += 1;
+            }
+        }
+    }
+
+    Ok(stats)
+}
+
+fn set_directory_mode(path: &Path, mode: u32) -> Result<(), Box<dyn Error>> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let permissions = std::fs::Permissions::from_mode(mode);
+        fs::set_permissions(path, permissions)?;
+    }
+
+    #[cfg(windows)]
+    {
+        // Windows doesn't support Unix-style permissions
+        // We could implement Windows ACL here if needed
+        eprintln!(
+            "{}: Mode setting not supported on Windows",
+            "Warning".yellow()
+        );
+    }
+
+    Ok(())
 }

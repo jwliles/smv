@@ -34,7 +34,6 @@ skim = "0.10.4"
 anyhow = "1.0"
 thiserror = "1.0"
 atty = "0.2"
-dsc-rs = { path = "../dsc-rs" }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

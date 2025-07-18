@@ -90,9 +90,9 @@ impl TransformType {
             TransformType::Pascal => "pascal".to_string(),
             TransformType::Lower => "lower".to_string(),
             TransformType::Upper => "upper".to_string(),
-            TransformType::Replace(find, replace) => format!("replace({} → {})", find, replace),
+            TransformType::Replace(find, replace) => format!("replace({find} → {replace})"),
             TransformType::ReplaceRegex(pattern, replacement) => {
-                format!("replace-regex({} → {})", pattern, replacement)
+                format!("replace-regex({pattern} → {replacement})")
             }
         }
     }
@@ -182,7 +182,7 @@ fn snake_case_preserve_extension(name: &str) -> String {
             let (basename, extension) = name.split_at(dot_pos);
             let transformed_basename = snake_case(basename);
             let transformed_extension = extension[1..].to_lowercase(); // Remove the dot and lowercase extension
-            format!("{}.{}", transformed_basename, transformed_extension)
+            format!("{transformed_basename}.{transformed_extension}")
         } else {
             // Dot at beginning or end, treat as regular filename
             snake_case(name)
@@ -226,7 +226,7 @@ where
             let (basename, extension) = name.split_at(dot_pos);
             let transformed_basename = transform_fn(basename);
             let transformed_extension = extension[1..].to_lowercase(); // Remove the dot and lowercase extension
-            format!("{}.{}", transformed_basename, transformed_extension)
+            format!("{transformed_basename}.{transformed_extension}")
         } else {
             // Dot at beginning or end, treat as regular filename
             transform_fn(name)
@@ -318,7 +318,7 @@ fn tokenize(name: &str, include_dots: bool) -> Vec<String> {
     separator_regex
         .split(&normalized)
         .filter(|s| !s.is_empty())
-        .flat_map(|word| split_camel_case_word(word))
+        .flat_map(split_camel_case_word)
         .collect()
 }
 
@@ -337,11 +337,10 @@ fn split_camel_case_word(word: &str) -> Vec<String> {
             // Current char is followed by lowercase (handles XMLDocument -> XML Document)
             (i + 1 < chars.len() && chars[i+1].is_lowercase())
             )
+            && !current_word.is_empty()
         {
-            if !current_word.is_empty() {
-                result.push(current_word.clone());
-                current_word.clear();
-            }
+            result.push(current_word.clone());
+            current_word.clear();
         }
         current_word.push(ch);
     }
@@ -441,10 +440,7 @@ fn replace_regex(name: &str, pattern: &str, replacement: &str) -> String {
     match Regex::new(pattern) {
         Ok(re) => re.replace_all(name, replacement).to_string(),
         Err(_) => {
-            eprintln!(
-                "Warning: Invalid regex pattern '{}', returning original string",
-                pattern
-            );
+            eprintln!("Warning: Invalid regex pattern '{pattern}', returning original string");
             name.to_string()
         }
     }

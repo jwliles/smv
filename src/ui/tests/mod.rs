@@ -3,7 +3,6 @@ mod tests {
     use crate::transformers::TransformType;
     use crate::ui::terminal::AppMode;
     use crate::ui::theme::Theme;
-    use std::path::PathBuf;
 
     #[test]
     fn test_theme_default() {

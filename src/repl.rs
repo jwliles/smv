@@ -438,7 +438,7 @@ impl InteractiveSession {
 
             let mut output = String::new();
             for (i, dir) in dirs.iter().enumerate() {
-                let formatted = format!("  {}/", dir).blue().bold().to_string();
+                let formatted = format!("  {dir}/").blue().bold().to_string();
                 output.push_str(&formatted);
 
                 // Add padding and handle line breaks
@@ -448,7 +448,7 @@ impl InteractiveSession {
                     output.push_str("  ");
                 }
             }
-            print!("{}", output);
+            print!("{output}");
         }
 
         // Format and display files
@@ -457,7 +457,7 @@ impl InteractiveSession {
 
             let mut output = String::new();
             for (i, file) in files.iter().enumerate() {
-                let formatted = format!("  {}", file).white().to_string();
+                let formatted = format!("  {file}").white().to_string();
                 output.push_str(&formatted);
 
                 // Add padding and handle line breaks
@@ -467,7 +467,7 @@ impl InteractiveSession {
                     output.push_str("  ");
                 }
             }
-            print!("{}", output);
+            print!("{output}");
         }
 
         // Display summary
@@ -479,7 +479,7 @@ impl InteractiveSession {
         // Format size in a human-readable way
         if total_size > 0 {
             let size_str = if total_size < 1024 {
-                format!("{} B", total_size)
+                format!("{total_size} B")
             } else if total_size < 1024 * 1024 {
                 format!("{:.1} KB", total_size as f64 / 1024.0)
             } else if total_size < 1024 * 1024 * 1024 {

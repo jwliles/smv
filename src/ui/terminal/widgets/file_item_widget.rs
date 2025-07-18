@@ -53,9 +53,7 @@ impl<'a> StatefulWidget for FileItemWidget<'a> {
 
         // Calculate available space for rendering
         let height = area.height as usize;
-        if height == 0 {
-            return;
-        }
+        if height == 0 {}
 
         // Render file items
         // This is a placeholder - would need to be implemented based on the actual FileExplorer state

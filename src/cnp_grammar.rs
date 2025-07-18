@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
@@ -12,6 +11,8 @@ pub struct CnpCommand {
     pub routes: Vec<Route>,
     pub flags: String,
     pub transform_command: Option<TransformCommand>,
+    pub remove_command: Option<RemoveCommand>,
+    pub case_insensitive: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +20,12 @@ pub struct TransformCommand {
     pub command_type: String,
     pub old_value: Option<String>,
     pub new_value: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RemoveCommand {
+    pub command_type: String, // "rm"
+    pub preview: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -89,12 +96,15 @@ pub struct CnpGrammarParser;
 
 impl CnpGrammarParser {
     pub fn parse(args: &[String]) -> Result<CnpCommand, Box<dyn Error>> {
+        println!("Debug CNP: parsing args: {:?}", args);
         let mut command = CnpCommand {
             path: ".".to_string(),
             filters: Vec::new(),
             routes: Vec::new(),
             flags: String::new(),
             transform_command: None,
+            remove_command: None,
+            case_insensitive: false,
         };
 
         let mut i = 0;
@@ -115,6 +125,12 @@ impl CnpGrammarParser {
                 continue;
             }
 
+            // Parse SMV remove commands FIRST (before transform commands)
+            if let Some(remove) = Self::parse_remove_command(args, &mut i)? {
+                command.remove_command = Some(remove);
+                continue;
+            }
+
             // Parse SMV transform commands
             if let Some(transform) = Self::parse_transform_command(args, &mut i)? {
                 command.transform_command = Some(transform);
@@ -122,14 +138,20 @@ impl CnpGrammarParser {
             }
 
             // Parse flags (starting with -)
-            if arg.starts_with('-') {
-                command.flags.push_str(&arg[1..]);
+            if let Some(flags) = arg.strip_prefix('-') {
+                println!("Debug CNP: parsing flag '{}', current flags: '{}'", flags, command.flags);
+                command.flags.push_str(flags);
+                println!("Debug CNP: after push, flags: '{}'", command.flags);
+                // Check for case-insensitive flag (both CNP standard 'ic' and SMV-specific 'i')
+                if flags.contains("ic") || flags.contains('i') {
+                    command.case_insensitive = true;
+                }
                 i += 1;
                 continue;
             }
 
-            // Parse path (first non-keyword argument)
-            if command.path == "." && !arg.contains(':') && !arg.starts_with('-') {
+            // Parse path (first non-keyword, non-command argument)
+            if command.path == "." && !arg.contains(':') && !arg.starts_with('-') && arg != "rm" {
                 command.path = arg.clone();
                 i += 1;
                 continue;
@@ -202,7 +224,7 @@ impl CnpGrammarParser {
                         "other" => FileType::Other,
                         _ => {
                             return Err(Box::new(GrammarParseError {
-                                message: format!("Invalid file type: {}", value),
+                                message: format!("Invalid file type: {value}"),
                             }))
                         }
                     };
@@ -220,7 +242,7 @@ impl CnpGrammarParser {
                         "configs" => SemanticGroup::Configs,
                         _ => {
                             return Err(Box::new(GrammarParseError {
-                                message: format!("Invalid semantic group: {}", value),
+                                message: format!("Invalid semantic group: {value}"),
                             }))
                         }
                     };
@@ -272,7 +294,7 @@ impl CnpGrammarParser {
                         "yaml" | "yml" => OutputFormat::Yaml,
                         _ => {
                             return Err(Box::new(GrammarParseError {
-                                message: format!("Invalid output format: {}", value),
+                                message: format!("Invalid output format: {value}"),
                             }))
                         }
                     };
@@ -332,7 +354,6 @@ impl CnpGrammarParser {
             _ => {}
         }
 
-        *i += 1;
         Ok(None)
     }
 
@@ -379,5 +400,27 @@ impl CnpGrammarParser {
         }
 
         expanded
+    }
+
+    fn parse_remove_command(
+        args: &[String],
+        i: &mut usize,
+    ) -> Result<Option<RemoveCommand>, Box<dyn Error>> {
+        if *i >= args.len() {
+            return Ok(None);
+        }
+
+        let arg = &args[*i];
+
+        // Check for rm command
+        if arg.to_lowercase() == "rm" {
+            *i += 1;
+            return Ok(Some(RemoveCommand {
+                command_type: "rm".to_string(),
+                preview: false, // Will be set based on flags later
+            }));
+        }
+
+        Ok(None)
     }
 }

@@ -1,6 +1,6 @@
-# 📐 LAR Project Command Philosophy
+# 📐 CNP Project Command Philosophy
 
-The `lar` toolset is built around a core principle of **clarity through consistency**. Each tool follows a common command-line structure that helps users easily remember, predict, and script interactions across the suite.
+The `cnp` toolset is built around a core principle of **clarity through consistency**. Each tool follows a common command-line structure that helps users easily remember, predict, and script interactions across the suite.
 
 Inspired by the ISO 8601 date format (`YYYY-MM-DD`), the CLI design uses a "largest to smallest" structure:
 
@@ -14,7 +14,7 @@ Inspired by the ISO 8601 date format (`YYYY-MM-DD`), the CLI design uses a "larg
 
 ### 🆕 Interactive Guidance System
 
-All AFN tools feature an Excel-like command guidance system:
+All CNP tools feature an Excel-like command guidance system:
 
 ```bash
 $ smv -snake . pdf
@@ -87,7 +87,7 @@ inx -scan ~/projects depth 3
 
 ## ✅ Universal Behaviors
 
-* **AFN REPL Integration**: All tools work within AFN REPL environment
+* **CNP REPL Integration**: All tools work within CNP REPL environment
 * **Interactive Guidance**: Excel-like command preview with F1 help and Tab completion
 * **Position-based Parsing**: Sequence and quantity constraints eliminate ambiguity
 * **No `--` Clutter**: After scope, flags are simple words (`preview`, `recursive`)
@@ -99,24 +99,53 @@ inx -scan ~/projects depth 3
 
 ---
 
-## 🔁 AFN REPL Workflow
+## 🔁 CNP REPL Workflow
 
-AFN serves as the unified entry point for all tools:
+CNP serves as the unified entry point for all tools:
 
 ```bash
-$ afn
-AFN> smv -snake . pdf preview
-AFN> mkr -template rust-cli mytool
-AFN> xfd -name ~/vault "*.md"
-AFN> exit
+$ cnp
+CNP> smv -snake . pdf preview
+CNP> mkr -template rust-cli mytool
+CNP> xfd -name ~/vault "*.md"
+CNP> exit
 $
 ```
 
 * **Persistent context**: REPL remembers project state
-* **Tool discovery**: Tab completion shows all available AFN tools
+* **Tool discovery**: Tab completion shows all available CNP tools
 * **Cross-tool workflows**: Chain operations without re-prefixing
 * **Consistent guidance**: Same interactive help system across all tools
 
 ---
 
-This command philosophy helps every `lar` tool feel familiar while remaining powerful and focused. Write once, remember forever.
+## 🔁 Alternative Command Formats
+
+For compatibility and different use cases, CNP also supports traditional long-form options:
+
+### Traditional Format (Alternative)
+
+```
+<tool> [scope/mode] [modifiers/options] [targets]
+```
+
+**Examples:**
+```sh
+mkr --template rust-cli --git --readme mytool
+smv --sort --preview downloads/
+xfd --name "*.md" --limit 10 ~/vault
+inx --scan --depth 3 ~/projects
+```
+
+### Optional Disambiguation Flags
+
+Some tools offer optional disambiguation flags:
+
+* `--cf` (create file)
+* `--md` (make directory)
+
+These are not required but help in ambiguous cases like `mkr docs`.
+
+---
+
+This command philosophy helps every `cnp` tool feel familiar while remaining powerful and focused. Write once, remember forever.

@@ -16,6 +16,12 @@ pub struct OperationQueue {
     selected_index: usize,
 }
 
+impl Default for OperationQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OperationQueue {
     pub fn new() -> Self {
         Self {
@@ -269,13 +275,10 @@ impl App {
     /// Handle keys in command mode
     fn handle_command_mode_key(&mut self, key: KeyEvent) -> anyhow::Result<()> {
         // Command input handling
-        match key.code {
-            KeyCode::Enter => {
-                // Process command (to be implemented)
-                self.mode = AppMode::Normal;
-                self.status_message = String::from("Command executed");
-            }
-            _ => {}
+        if key.code == KeyCode::Enter {
+            // Process command (to be implemented)
+            self.mode = AppMode::Normal;
+            self.status_message = String::from("Command executed");
         }
 
         Ok(())
@@ -284,12 +287,9 @@ impl App {
     /// Handle keys in insert mode
     fn handle_insert_mode_key(&mut self, key: KeyEvent) -> anyhow::Result<()> {
         // Text editing for rename operations
-        match key.code {
-            KeyCode::Enter => {
-                // Finish text input
-                self.mode = AppMode::Normal;
-            }
-            _ => {}
+        if key.code == KeyCode::Enter {
+            // Finish text input
+            self.mode = AppMode::Normal;
         }
 
         Ok(())
@@ -346,7 +346,7 @@ impl App {
                 }
 
                 if added_count > 0 {
-                    self.status_message = format!("Added {} file(s) to queue", added_count);
+                    self.status_message = format!("Added {added_count} file(s) to queue");
                 } else {
                     self.status_message = String::from("No files to add (directories are ignored)");
                 }
@@ -470,10 +470,7 @@ impl App {
         }
 
         self.queue.clear();
-        self.status_message = format!(
-            "Executed: {} success, {} errors",
-            success_count, error_count
-        );
+        self.status_message = format!("Executed: {success_count} success, {error_count} errors");
 
         // Reload the file explorer to show changes
         let _ = self.explorer.reload_files();
@@ -490,7 +487,7 @@ impl App {
                 let _ = self.explorer.reload_files();
             }
             Err(e) => {
-                self.status_message = format!("Error grouping files: {}", e);
+                self.status_message = format!("Error grouping files: {e}");
             }
         }
         Ok(())
@@ -507,7 +504,7 @@ impl App {
                 let _ = self.explorer.reload_files();
             }
             Err(e) => {
-                self.status_message = format!("Error flattening directory: {}", e);
+                self.status_message = format!("Error flattening directory: {e}");
             }
         }
         Ok(())
@@ -554,7 +551,7 @@ impl App {
                 .split(size);
 
             // Header
-            let header = Paragraph::new(format!("SMV Terminal UI - {}", current_dir))
+            let header = Paragraph::new(format!("SMV Terminal UI - {current_dir}"))
                 .block(Block::default().borders(Borders::ALL).title("Smart Move"))
                 .style(Style::default().fg(Color::Cyan));
             frame.render_widget(header, chunks[0]);
@@ -572,13 +569,13 @@ impl App {
             let explorer_content: Vec<ListItem> = files_data.iter()
                 .map(|(name, is_dir, idx)| {
                     let icon = if *is_dir { "📁" } else { "📄" };
-                    let mut line = format!("{} {}", icon, name);
+                    let mut line = format!("{icon} {name}");
 
                     // Add visual selection indicator
                     if let (Some(start), Some(current)) = (visual_start, selected_index) {
                         let (min, max) = if start <= current { (start, current) } else { (current, start) };
                         if *idx >= min && *idx <= max {
-                            line = format!("► {}", line);  // Visual selection marker
+                            line = format!("► {line}");  // Visual selection marker
                         }
                     }
 
@@ -598,10 +595,10 @@ impl App {
 
             // Queue view with detailed operations
             let queue_content = if queue_len > 0 {
-                let mut items = vec![ListItem::new(format!("📝 {} operations pending:", queue_len))];
+                let mut items = vec![ListItem::new(format!("📝 {queue_len} operations pending:"))];
 
                 // Show up to 8 operations in detail
-                for (_i, op) in self.queue.operations().iter().take(8).enumerate() {
+                for op in self.queue.operations().iter().take(8) {
                     let op_icon = match &op.operation_type {
                         OperationType::Move => "📁",
                         OperationType::Transform(t) => match t {
@@ -621,9 +618,9 @@ impl App {
                         .unwrap_or_else(|| "<unknown>".into());
 
                     let op_text = if source_name == dest_name {
-                        format!("{} {}", op_icon, source_name)
+                        format!("{op_icon} {source_name}")
                     } else {
-                        format!("{} {} → {}", op_icon, source_name, dest_name)
+                        format!("{op_icon} {source_name} → {dest_name}")
                     };
 
                     items.push(ListItem::new(op_text));
@@ -664,7 +661,7 @@ impl App {
                 AppMode::Help => "Press ESC, ?, or q to exit help mode",
                 _ => "j/k: Navigate | Enter: select | h: back | l: forward | ?: Help",
             };
-            let status_text = format!("Mode: {} | {} | {}", mode, status_message, nav_help);
+            let status_text = format!("Mode: {mode} | {status_message} | {nav_help}");
             let status = Paragraph::new(status_text)
                 .block(Block::default().borders(Borders::ALL))
                 .style(Style::default().fg(Color::Yellow))
@@ -770,7 +767,7 @@ impl UserInterface for App {
     fn run(&mut self) -> Result<(), Box<dyn Error>> {
         // Force initial render
         self.render()
-            .map_err(|e| format!("Initial render failed: {}", e))?;
+            .map_err(|e| format!("Initial render failed: {e}"))?;
 
         // Main event loop
         while !self.should_exit {
@@ -778,7 +775,7 @@ impl UserInterface for App {
             match self.tui.next_event() {
                 Ok(Event::Key(key)) => {
                     self.handle_key_event(key)
-                        .map_err(|e| format!("Key event handling failed: {}", e))?;
+                        .map_err(|e| format!("Key event handling failed: {e}"))?;
                 }
                 Ok(Event::Resize(_, _)) => {
                     // Terminal was resized, redraw on next iteration
@@ -787,13 +784,13 @@ impl UserInterface for App {
                     // Regular tick event for animations
                 }
                 Err(e) => {
-                    eprintln!("Event error: {}", e);
+                    eprintln!("Event error: {e}");
                     // Continue rather than exit on event errors
                 }
             }
 
             // Draw UI after handling events
-            self.render().map_err(|e| format!("Render failed: {}", e))?;
+            self.render().map_err(|e| format!("Render failed: {e}"))?;
         }
 
         // Clean up

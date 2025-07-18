@@ -23,6 +23,12 @@ pub struct PreviewOperation {
     pub has_conflict: bool,
 }
 
+impl Default for PreviewView {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PreviewView {
     /// Create a new preview view
     pub fn new() -> Self {

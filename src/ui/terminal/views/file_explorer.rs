@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 pub use std::path::PathBuf;
@@ -38,6 +39,8 @@ pub struct FileExplorer {
     search_pattern: Option<String>,
     /// Filtered files based on search
     filtered_files: Vec<usize>,
+    /// Cursor position memory for each directory
+    cursor_positions: HashMap<PathBuf, usize>,
 }
 
 impl FileExplorer {
@@ -50,6 +53,7 @@ impl FileExplorer {
             visual_selection_start: None,
             search_pattern: None,
             filtered_files: Vec::new(),
+            cursor_positions: HashMap::new(),
         };
 
         // Load initial directory
@@ -61,9 +65,30 @@ impl FileExplorer {
 
     /// Change directory
     pub fn change_directory(&mut self, dir: PathBuf) -> Result<(), Box<dyn Error>> {
+        // Save current cursor position for the current directory
+        if let Some(current_selection) = self.state.selected() {
+            self.cursor_positions
+                .insert(self.current_dir.clone(), current_selection);
+        }
+
+        // Change to new directory
         self.current_dir = dir;
         self.reload_files()?;
-        self.state.select(Some(0));
+
+        // Restore cursor position for the new directory, or default to 0
+        let cursor_position = self
+            .cursor_positions
+            .get(&self.current_dir)
+            .copied()
+            .unwrap_or(0);
+        let max_index = if self.files.is_empty() {
+            0
+        } else {
+            self.files.len() - 1
+        };
+        let safe_position = cursor_position.min(max_index);
+        self.state.select(Some(safe_position));
+
         self.visual_selection_start = None;
         self.search_pattern = None;
         self.filtered_files.clear();
@@ -161,7 +186,7 @@ impl FileExplorer {
         // Run skim
         let selected_items = Skim::run_with(&options, Some(items))
             .map(|out| out.selected_items)
-            .unwrap_or_else(|| Vec::new());
+            .unwrap_or_default();
 
         // Process selected items
         if !selected_items.is_empty() {
@@ -455,13 +480,7 @@ impl FileExplorer {
             }
 
             let i = match self.state.selected() {
-                Some(i) => {
-                    if i >= count {
-                        i - count
-                    } else {
-                        0 // Stop at first item instead of wrapping
-                    }
-                }
+                Some(i) => i.saturating_sub(count),
                 None => 0,
             };
             self.state.select(Some(i));
@@ -473,13 +492,7 @@ impl FileExplorer {
             }
 
             let i = match self.state.selected() {
-                Some(i) => {
-                    if i >= count {
-                        i - count
-                    } else {
-                        0 // Stop at first item instead of wrapping
-                    }
-                }
+                Some(i) => i.saturating_sub(count),
                 None => 0,
             };
             self.state.select(Some(i));
@@ -499,10 +512,8 @@ impl FileExplorer {
             if !self.files.is_empty() {
                 self.state.select(Some(self.files.len() - 1));
             }
-        } else {
-            if !self.filtered_files.is_empty() {
-                self.state.select(Some(self.filtered_files.len() - 1));
-            }
+        } else if !self.filtered_files.is_empty() {
+            self.state.select(Some(self.filtered_files.len() - 1));
         }
     }
 }
