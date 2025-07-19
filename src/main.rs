@@ -1615,10 +1615,15 @@ fn should_use_cnp_grammar(args: &Args) -> bool {
             || matches!(*arg, "TO" | "INTO" | "FORMAT")
     });
 
+    // Check for glob patterns that should use CNP parsing
+    let has_glob_patterns = all_args.iter().any(|arg| {
+        arg.contains('*') || arg.contains('?') || arg.contains('[') || arg.contains('{')
+    });
+
     // Special case: rm command with CNP filters
     let has_rm_with_filters = args.command.as_deref() == Some("rm") && has_cnp_keywords;
 
-    has_cnp_keywords || has_rm_with_filters
+    has_cnp_keywords || has_glob_patterns || has_rm_with_filters
 }
 
 /// Run CNP grammar command
