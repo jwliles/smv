@@ -102,6 +102,10 @@ impl PreviewView {
                 filename,
                 &transformers::TransformType::ReplaceRegex(pattern.clone(), replacement.clone()),
             ),
+            TransformType::RemovePrefix(prefix) => transformers::transform(
+                filename,
+                &transformers::TransformType::RemovePrefix(prefix.clone()),
+            ),
         }
     }
 }

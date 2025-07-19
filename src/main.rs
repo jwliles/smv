@@ -17,10 +17,10 @@ use colored::*;
 use dirs::home_dir;
 
 use cnp_grammar::{CnpCommand, CnpGrammarParser};
-use file_ops::{copy_files, expand_glob_patterns, move_files, remove_files, FileOpConfig};
+use file_ops::{FileOpConfig, copy_files, expand_glob_patterns, move_files, remove_files};
 use history::HistoryManager;
 use repl::InteractiveSession;
-use transformers::{transform, TransformType};
+use transformers::{TransformType, transform};
 use ui::UserInterface;
 
 #[derive(Parser, Debug)]
@@ -34,7 +34,7 @@ SYNTAX:
   smv [COMMAND] [OPTIONS] [TARGET] [FLAGS]
 
 COMMANDS:
-  CHANGE \"old\" INTO \"new\" [target]  Replace substring in filenames
+  CHANGE \"old\" INTO \"new\" [target]  Replace substring in filenames (use empty \"\" to remove prefix)
   snake, kebab, pascal, camel           Transform filename case/format
   sort, group, flatten                  Organize files
   mv source destination                 Move files/directories
@@ -61,6 +61,8 @@ FLAGS:
 EXAMPLES:
   smv snake . -rp                      # Preview snake_case transformation
   smv CHANGE \"old\" INTO \"new\" . -r    # Replace substring in filenames
+  smv CHANGE \"IMG_\" INTO \"\" . -rp      # Preview removal of IMG_ prefix from all files
+  smv CHANGE \"DSC_\" INTO \"\" pictures/  # Remove DSC_ prefix from files in pictures/
   smv mv file.txt newname.txt          # Move/rename file
   smv cp *.txt backup/ -r              # Copy files recursively
   smv rm . NAME:- -p                   # Preview delete files containing \"-\"
@@ -374,10 +376,16 @@ fn parse_xfd_command(args: &Args) -> Result<XfdCommand, Box<dyn Error>> {
                 .arg2
                 .as_ref()
                 .ok_or("Missing new string after INTO keyword")?;
-            Ok(XfdCommand::Change {
-                old: old.clone(),
-                new: new.clone(),
-            })
+
+            // Handle prefix removal: CHANGE "prefix" INTO ""
+            if new.is_empty() {
+                Ok(XfdCommand::Transform(TransformType::remove_prefix(old)))
+            } else {
+                Ok(XfdCommand::Change {
+                    old: old.clone(),
+                    new: new.clone(),
+                })
+            }
         }
         Some("REGEX") => {
             let pattern = args
@@ -1729,7 +1737,7 @@ fn run_cnp_command(args: &Args) -> Result<(), Box<dyn Error>> {
             _ => {
                 return Err(
                     format!("Unknown transform command: {}", transform_cmd.command_type).into(),
-                )
+                );
             }
         };
 
@@ -2347,7 +2355,10 @@ fn run_cnp_remove_command(cnp_command: &CnpCommand) -> Result<(), Box<dyn Error>
     let preview = cnp_command.flags.contains('p');
     let force = cnp_command.flags.contains('f');
     let include_hidden = cnp_command.flags.contains('a');
-    println!("Debug: flags='{}', include_hidden={}", cnp_command.flags, include_hidden);
+    println!(
+        "Debug: flags='{}', include_hidden={}",
+        cnp_command.flags, include_hidden
+    );
 
     // Expand semantic groups
     let expanded_filters =

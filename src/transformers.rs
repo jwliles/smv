@@ -35,6 +35,8 @@ pub enum TransformType {
     Replace(String, String),
     /// Replace using regex pattern (pattern, replacement)
     ReplaceRegex(String, String),
+    /// Remove prefix from filename
+    RemovePrefix(String),
 }
 
 impl TransformType {
@@ -73,6 +75,11 @@ impl TransformType {
         TransformType::ReplaceRegex(pattern.to_string(), replacement.to_string())
     }
 
+    /// Create a RemovePrefix transformation from prefix string
+    pub fn remove_prefix(prefix: &str) -> Self {
+        TransformType::RemovePrefix(prefix.to_string())
+    }
+
     /// Get string representation of the transform type
     ///
     /// This method returns the string representation of a TransformType.
@@ -94,6 +101,7 @@ impl TransformType {
             TransformType::ReplaceRegex(pattern, replacement) => {
                 format!("replace-regex({pattern} → {replacement})")
             }
+            TransformType::RemovePrefix(prefix) => format!("remove-prefix({prefix})"),
         }
     }
 }
@@ -132,6 +140,7 @@ pub fn transform(name: &str, transform_type: &TransformType) -> String {
         TransformType::ReplaceRegex(pattern, replacement) => {
             replace_regex(name, pattern, replacement)
         }
+        TransformType::RemovePrefix(prefix) => remove_prefix(name, prefix),
     }
 }
 
@@ -446,6 +455,26 @@ fn replace_regex(name: &str, pattern: &str, replacement: &str) -> String {
     }
 }
 
+/// Remove prefix from a filename
+///
+/// This function removes a specified prefix from the beginning of a filename.
+/// If the filename doesn't start with the prefix, it returns the original filename unchanged.
+/// This is particularly useful for batch operations on files with common prefixes.
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+/// * `prefix` - The prefix string to remove from the beginning
+///
+/// # Returns
+/// A new string with the prefix removed, or the original string if it doesn't start with the prefix
+fn remove_prefix(name: &str, prefix: &str) -> String {
+    if let Some(stripped) = name.strip_prefix(prefix) {
+        stripped.to_string()
+    } else {
+        name.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -575,5 +604,29 @@ mod tests {
 
         let regex_transform = TransformType::ReplaceRegex(r"\d+".to_string(), "XXX".to_string());
         assert_eq!(transform("file123.txt", &regex_transform), "fileXXX.txt");
+    }
+
+    #[test]
+    fn test_remove_prefix() {
+        assert_eq!(remove_prefix("prefix_file.txt", "prefix_"), "file.txt");
+        assert_eq!(remove_prefix("IMG_1234.jpg", "IMG_"), "1234.jpg");
+        assert_eq!(remove_prefix("DSC_9876.png", "DSC_"), "9876.png");
+        assert_eq!(remove_prefix("no_match.txt", "prefix_"), "no_match.txt");
+        assert_eq!(remove_prefix("prefix_", "prefix_"), "");
+        assert_eq!(remove_prefix("", "prefix_"), "");
+        assert_eq!(remove_prefix("file.txt", ""), "file.txt");
+    }
+
+    #[test]
+    fn test_transform_remove_prefix() {
+        let remove_prefix_transform = TransformType::RemovePrefix("IMG_".to_string());
+        assert_eq!(
+            transform("IMG_1234.jpg", &remove_prefix_transform),
+            "1234.jpg"
+        );
+        assert_eq!(
+            transform("no_prefix.jpg", &remove_prefix_transform),
+            "no_prefix.jpg"
+        );
     }
 }
