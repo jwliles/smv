@@ -77,6 +77,10 @@ smv pascal . SIZE>1MB TYPE:file -p       # Large files only
 
 # Date-based filtering  
 smv lower . MODIFIED>2024-01-01 -r       # Files modified after Jan 1, 2024
+
+# Prefix removal
+smv CHANGE "IMG_" INTO "" . EXT:jpg -p    # Remove "IMG_" prefix from all JPG files
+smv CHANGE "DSC" INTO "" . EXT:png        # Remove "DSC" prefix from PNG files
 ```
 
 #### Advanced CNP Features
@@ -297,7 +301,7 @@ Commands:
 smv <COMMAND> <PATH> [FILTERS] [ROUTES] [FLAGS]
 ```
 
-**Commands**: `snake`, `kebab`, `pascal`, `camel`, `title`, `lower`, `upper`, `clean`, `CHANGE "old" INTO "new"`, `REGEX "pattern" INTO "replacement"`
+**Commands**: `snake`, `kebab`, `pascal`, `camel`, `title`, `lower`, `upper`, `clean`, `CHANGE "old" INTO "new"`, `CHANGE "prefix" INTO ""` (prefix removal), `REGEX "pattern" INTO "replacement"`
 
 **Filters**:
 - `NAME:value` - Match filenames containing value  
@@ -354,6 +358,7 @@ Options:
 | `pascal` | Convert to PascalCase | `my_file.txt` → `MyFile.txt` |
 | `lower` | Convert to lowercase | `MyFile.txt` → `myfile.txt` |
 | `upper` | Convert to UPPERCASE | `myFile.txt` → `MYFILE.TXT` |
+| `CHANGE "prefix" INTO ""` | Remove prefix from filename | `IMG_1234.jpg` → `1234.jpg` |
 
 ## Safety Features
 

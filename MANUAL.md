@@ -32,6 +32,7 @@ smv <COMMAND> <PATH> [FILTERS] [ROUTES] [FLAGS]
 - **upper** - Convert filenames to UPPERCASE
 - **clean** - Clean up spaces and special characters
 - **CHANGE** "old" **INTO** "new" - Replace substring in filenames
+- **CHANGE** "prefix" **INTO** "" - Remove prefix from filenames
 - **REGEX** "pattern" **INTO** "replacement" - Replace using regex
 
 ### Filters
@@ -122,6 +123,9 @@ smv snake . EXT:md FORMAT:csv
 # Replace substring in filenames
 smv CHANGE "old" INTO "new" . -p
 
+# Remove prefix from filenames
+smv CHANGE "IMG_" INTO "" . EXT:jpg -p
+
 # Use regex for complex patterns
 smv REGEX "\\d+" INTO "XXX" . -r
 ```
@@ -195,6 +199,7 @@ Features:
 | pascal | Convert to PascalCase | `my_file.txt` → `MyFile.txt` |
 | lower | Convert to lowercase | `MyFile.txt` → `myfile.txt` |
 | upper | Convert to UPPERCASE | `myFile.txt` → `MYFILE.TXT` |
+| CHANGE "prefix" INTO "" | Remove prefix from filename | `IMG_1234.jpg` → `1234.jpg` |
 
 ## SIZE UNITS
 
