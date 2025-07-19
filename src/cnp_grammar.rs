@@ -139,7 +139,10 @@ impl CnpGrammarParser {
 
             // Parse flags (starting with -)
             if let Some(flags) = arg.strip_prefix('-') {
-                println!("Debug CNP: parsing flag '{}', current flags: '{}'", flags, command.flags);
+                println!(
+                    "Debug CNP: parsing flag '{}', current flags: '{}'",
+                    flags, command.flags
+                );
                 command.flags.push_str(flags);
                 println!("Debug CNP: after push, flags: '{}'", command.flags);
                 // Check for case-insensitive flag (both CNP standard 'ic' and SMV-specific 'i')
@@ -225,7 +228,7 @@ impl CnpGrammarParser {
                         _ => {
                             return Err(Box::new(GrammarParseError {
                                 message: format!("Invalid file type: {value}"),
-                            }))
+                            }));
                         }
                     };
                     Ok(Some(Filter::Type(file_type)))
@@ -243,7 +246,7 @@ impl CnpGrammarParser {
                         _ => {
                             return Err(Box::new(GrammarParseError {
                                 message: format!("Invalid semantic group: {value}"),
-                            }))
+                            }));
                         }
                     };
                     Ok(Some(Filter::For(semantic_group)))
@@ -295,7 +298,7 @@ impl CnpGrammarParser {
                         _ => {
                             return Err(Box::new(GrammarParseError {
                                 message: format!("Invalid output format: {value}"),
-                            }))
+                            }));
                         }
                     };
                     Ok(Some(Route::Format(format)))

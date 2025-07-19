@@ -6,17 +6,17 @@ use std::process;
 
 use colored::*;
 use glob::glob;
+use rustyline::Helper;
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
 use rustyline::history::DefaultHistory;
 use rustyline::validate::Validator;
-use rustyline::Helper;
 use rustyline::{CompletionType, Config, Editor, Result as RustylineResult};
 
 use crate::history::HistoryManager;
-use crate::transformers::{transform, TransformType};
+use crate::transformers::{TransformType, transform};
 
 // Custom command completer
 struct CommandCompleter {

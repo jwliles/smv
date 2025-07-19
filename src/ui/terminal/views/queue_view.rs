@@ -1,9 +1,9 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::widgets::ListState;
 
+use crate::ui::UiAction;
 use crate::ui::terminal::app::OperationQueue;
 use crate::ui::terminal::{AppMode, KeyResult};
-use crate::ui::UiAction;
 
 /// View for the operation queue
 pub struct QueueView {

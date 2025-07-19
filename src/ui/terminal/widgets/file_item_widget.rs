@@ -4,8 +4,8 @@ use ratatui::{
     widgets::{Block, StatefulWidget, Widget},
 };
 
-use crate::ui::terminal::views::FileExplorer;
 use crate::ui::Theme;
+use crate::ui::terminal::views::FileExplorer;
 
 /// Custom widget for displaying file items
 pub struct FileItemWidget<'a> {

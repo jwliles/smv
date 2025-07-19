@@ -85,11 +85,7 @@ impl CommandState {
 
     /// Get the count, defaulting to 1 if not set
     pub fn get_count(&self) -> usize {
-        if self.count == 0 {
-            1
-        } else {
-            self.count
-        }
+        if self.count == 0 { 1 } else { self.count }
     }
 
     /// Parse a digit into the count
