@@ -31,12 +31,38 @@ pub enum TransformType {
     Lower,
     /// Converts to all uppercase
     Upper,
+    /// Converts to Sentence case (only first word capitalized)
+    Sentence,
+    /// Converts to Start Case (all words capitalized with spaces)
+    Start,
+    /// Converts to StudlyCaps (alternating case)
+    Studly,
     /// Replace substring (find, replace)
     Replace(String, String),
     /// Replace using regex pattern (pattern, replacement)
     ReplaceRegex(String, String),
     /// Remove prefix from filename
     RemovePrefix(String),
+    /// Split camelCase/PascalCase and convert to snake_case
+    SplitSnake,
+    /// Split camelCase/PascalCase and convert to kebab-case
+    SplitKebab,
+    /// Split camelCase/PascalCase and convert to Title Case
+    SplitTitle,
+    /// Split camelCase/PascalCase and convert to camelCase
+    SplitCamel,
+    /// Split camelCase/PascalCase and convert to PascalCase
+    SplitPascal,
+    /// Split camelCase/PascalCase and convert to lowercase
+    SplitLower,
+    /// Split camelCase/PascalCase and convert to uppercase
+    SplitUpper,
+    /// Split camelCase/PascalCase and convert to Sentence case
+    SplitSentence,
+    /// Split camelCase/PascalCase and convert to Start Case
+    SplitStart,
+    /// Split camelCase/PascalCase and convert to StudlyCaps
+    SplitStudly,
 }
 
 impl TransformType {
@@ -61,6 +87,9 @@ impl TransformType {
             "pascal" => Some(TransformType::Pascal),
             "lower" => Some(TransformType::Lower),
             "upper" => Some(TransformType::Upper),
+            "sentence" => Some(TransformType::Sentence),
+            "start" => Some(TransformType::Start),
+            "studly" => Some(TransformType::Studly),
             _ => None,
         }
     }
@@ -97,11 +126,24 @@ impl TransformType {
             TransformType::Pascal => "pascal".to_string(),
             TransformType::Lower => "lower".to_string(),
             TransformType::Upper => "upper".to_string(),
+            TransformType::Sentence => "sentence".to_string(),
+            TransformType::Start => "start".to_string(),
+            TransformType::Studly => "studly".to_string(),
             TransformType::Replace(find, replace) => format!("replace({find} → {replace})"),
             TransformType::ReplaceRegex(pattern, replacement) => {
                 format!("replace-regex({pattern} → {replacement})")
             }
             TransformType::RemovePrefix(prefix) => format!("remove-prefix({prefix})"),
+            TransformType::SplitSnake => "split-snake".to_string(),
+            TransformType::SplitKebab => "split-kebab".to_string(),
+            TransformType::SplitTitle => "split-title".to_string(),
+            TransformType::SplitCamel => "split-camel".to_string(),
+            TransformType::SplitPascal => "split-pascal".to_string(),
+            TransformType::SplitLower => "split-lower".to_string(),
+            TransformType::SplitUpper => "split-upper".to_string(),
+            TransformType::SplitSentence => "split-sentence".to_string(),
+            TransformType::SplitStart => "split-start".to_string(),
+            TransformType::SplitStudly => "split-studly".to_string(),
         }
     }
 }
@@ -136,11 +178,24 @@ pub fn transform(name: &str, transform_type: &TransformType) -> String {
         TransformType::Pascal => pascal_case_preserve_extension(name),
         TransformType::Lower => name.to_lowercase(),
         TransformType::Upper => name.to_uppercase(),
+        TransformType::Sentence => sentence_case_preserve_extension(name),
+        TransformType::Start => start_case_preserve_extension(name),
+        TransformType::Studly => studly_caps_preserve_extension(name),
         TransformType::Replace(find, replace) => replace_substring(name, find, replace),
         TransformType::ReplaceRegex(pattern, replacement) => {
             replace_regex(name, pattern, replacement)
         }
         TransformType::RemovePrefix(prefix) => remove_prefix(name, prefix),
+        TransformType::SplitSnake => split_and_transform(name, TransformType::Snake),
+        TransformType::SplitKebab => split_and_transform(name, TransformType::Kebab),
+        TransformType::SplitTitle => split_and_transform(name, TransformType::Title),
+        TransformType::SplitCamel => split_and_transform(name, TransformType::Camel),
+        TransformType::SplitPascal => split_and_transform(name, TransformType::Pascal),
+        TransformType::SplitLower => split_and_transform(name, TransformType::Lower),
+        TransformType::SplitUpper => split_and_transform(name, TransformType::Upper),
+        TransformType::SplitSentence => split_and_transform(name, TransformType::Sentence),
+        TransformType::SplitStart => split_and_transform(name, TransformType::Start),
+        TransformType::SplitStudly => split_and_transform(name, TransformType::Studly),
     }
 }
 
@@ -259,13 +314,19 @@ where
 /// # Returns
 /// A new string in Title Case format
 fn title_case(name: &str) -> String {
-    let tokens = tokenize(name, true);
+    let tokens = tokenize(name, false);
     format_title(&tokens)
+}
+
+/// Convert a filename to Title Case for filenames (no spaces)
+fn title_case_filename(name: &str) -> String {
+    let tokens = tokenize(name, false);
+    format_title_filename(&tokens)
 }
 
 /// Convert a filename to Title Case while preserving the file extension
 fn title_case_preserve_extension(name: &str) -> String {
-    preserve_extension_transform(name, title_case)
+    preserve_extension_transform(name, title_case_filename)
 }
 
 /// Convert a filename to camelCase
@@ -311,6 +372,39 @@ fn pascal_case(name: &str) -> String {
 /// Convert a filename to PascalCase while preserving the file extension
 fn pascal_case_preserve_extension(name: &str) -> String {
     preserve_extension_transform(name, pascal_case)
+}
+
+/// Convert a filename to Sentence case for filenames
+fn sentence_case_filename(name: &str) -> String {
+    let tokens = tokenize(name, false);
+    format_sentence(&tokens)
+}
+
+/// Convert a filename to Sentence case while preserving the file extension
+fn sentence_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, sentence_case_filename)
+}
+
+/// Convert a filename to Start Case for filenames
+fn start_case_filename(name: &str) -> String {
+    let tokens = tokenize(name, false);
+    format_start(&tokens)
+}
+
+/// Convert a filename to Start Case while preserving the file extension
+fn start_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, start_case_filename)
+}
+
+/// Convert a filename to StudlyCaps for filenames
+fn studly_caps_filename(name: &str) -> String {
+    let tokens = tokenize(name, false);
+    format_studly(&tokens)
+}
+
+/// Convert a filename to StudlyCaps while preserving the file extension
+fn studly_caps_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, studly_caps_filename)
 }
 
 /// Tokenize a string into constituent words, handling all separators and camelCase
@@ -393,7 +487,7 @@ fn format_pascal(tokens: &[String]) -> String {
         .join("")
 }
 
-/// Format tokens as Title Case
+/// Format tokens as Title Case (with spaces for regular text)
 fn format_title(tokens: &[String]) -> String {
     tokens
         .iter()
@@ -402,18 +496,70 @@ fn format_title(tokens: &[String]) -> String {
         .join(" ")
 }
 
+/// Format tokens as Title Case for filenames (without spaces)
+fn format_title_filename(tokens: &[String]) -> String {
+    tokens
+        .iter()
+        .map(|token| capitalize_first(token))
+        .collect::<Vec<String>>()
+        .join("")
+}
+
+/// Format tokens as Sentence case (only first word capitalized, rest lowercase)
+fn format_sentence(tokens: &[String]) -> String {
+    if tokens.is_empty() {
+        return String::new();
+    }
+
+    let mut result = capitalize_first(&tokens[0]);
+    for token in &tokens[1..] {
+        result.push_str(&token.to_lowercase());
+    }
+    result
+}
+
+/// Format tokens as Start Case (all words capitalized with spaces)
+fn format_start(tokens: &[String]) -> String {
+    tokens
+        .iter()
+        .map(|token| capitalize_first(token))
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
+/// Format tokens as StudlyCaps (alternating case)
+fn format_studly(tokens: &[String]) -> String {
+    let full_text = tokens.join("");
+    let mut result = String::new();
+    let mut letter_count = 0;
+
+    for ch in full_text.chars() {
+        if ch.is_alphabetic() {
+            if letter_count % 2 == 0 {
+                result.push(ch.to_lowercase().next().unwrap_or(ch));
+            } else {
+                result.push(ch.to_uppercase().next().unwrap_or(ch));
+            }
+            letter_count += 1;
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 /// Helper function to capitalize the first letter of a string
 ///
 /// # Arguments
 /// * `s` - The string to capitalize
 ///
 /// # Returns
-/// A new string with the first letter capitalized and the rest unchanged
+/// A new string with the first letter capitalized and the rest lowercased
 fn capitalize_first(s: &str) -> String {
     let mut chars = s.chars();
     match chars.next() {
         None => String::new(),
-        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        Some(first) => first.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase(),
     }
 }
 
@@ -473,6 +619,64 @@ fn remove_prefix(name: &str, prefix: &str) -> String {
     } else {
         name.to_string()
     }
+}
+
+/// Split camelCase/PascalCase text at word boundaries
+fn split_camel_case_boundaries(text: &str) -> Vec<String> {
+    // Use regex to find word boundaries in camelCase/PascalCase
+    static CAMEL_SPLIT_RE: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"([a-z])([A-Z])|([A-Z]+)([A-Z][a-z])").unwrap());
+
+    // Insert spaces at word boundaries
+    let spaced = CAMEL_SPLIT_RE.replace_all(text, "$1$3 $2$4");
+
+    // Split on spaces and filter empty strings
+    spaced.split_whitespace().map(|s| s.to_string()).collect()
+}
+
+/// Split camelCase/PascalCase and apply transformation with extension preservation
+fn split_and_transform(name: &str, transform_type: TransformType) -> String {
+    if let Some(dot_pos) = name.rfind('.') {
+        if dot_pos > 0 && dot_pos < name.len() - 1 {
+            // File has an extension
+            let (basename, extension) = name.split_at(dot_pos);
+            let transformed_basename = split_and_transform_basename(basename, transform_type);
+            let transformed_extension = extension[1..].to_lowercase(); // Remove the dot and lowercase extension
+            format!("{transformed_basename}.{transformed_extension}")
+        } else {
+            // Dot at beginning or end, treat as regular filename
+            split_and_transform_basename(name, transform_type)
+        }
+    } else {
+        // No extension
+        split_and_transform_basename(name, transform_type)
+    }
+}
+
+/// Split camelCase/PascalCase basename and apply transformation
+fn split_and_transform_basename(basename: &str, transform_type: TransformType) -> String {
+    // Split at camelCase/PascalCase boundaries
+    let words = split_camel_case_boundaries(basename);
+
+    // If no boundaries found, fall back to regular transformation
+    if words.len() <= 1 {
+        return transform(basename, &transform_type);
+    }
+
+    // Join words with appropriate separators and apply transformation
+    let joined = match transform_type {
+        TransformType::Snake => words.join("_").to_lowercase(),
+        TransformType::Kebab => words.join("-").to_lowercase(),
+        TransformType::Lower => words.join("").to_lowercase(),
+        TransformType::Upper => words.join("").to_uppercase(),
+        _ => {
+            // For other transformations, join with spaces and apply transformation
+            let joined_with_spaces = words.join(" ");
+            transform(&joined_with_spaces, &transform_type)
+        }
+    };
+
+    joined
 }
 
 #[cfg(test)]
@@ -618,6 +822,37 @@ mod tests {
     }
 
     #[test]
+    fn test_sentence_case() {
+        assert_eq!(sentence_case_filename("hello_world"), "Helloworld");
+        assert_eq!(sentence_case_filename("HELLO_WORLD"), "Helloworld");
+        assert_eq!(sentence_case_filename("HelloWorld"), "Helloworld");
+        assert_eq!(
+            sentence_case_filename("multiple words here"),
+            "Multiplewordshere"
+        );
+    }
+
+    #[test]
+    fn test_start_case() {
+        assert_eq!(start_case_filename("hello_world"), "Hello World");
+        assert_eq!(start_case_filename("HELLO_WORLD"), "Hello World");
+        assert_eq!(start_case_filename("HelloWorld"), "Hello World");
+        assert_eq!(
+            start_case_filename("multiple words here"),
+            "Multiple Words Here"
+        );
+    }
+
+    #[test]
+    fn test_studly_caps() {
+        assert_eq!(studly_caps_filename("hello_world"), "hElLoWoRlD");
+        assert_eq!(studly_caps_filename("HELLO_WORLD"), "hElLoWoRlD");
+        assert_eq!(studly_caps_filename("HelloWorld"), "hElLoWoRlD");
+        assert_eq!(studly_caps_filename("abc"), "aBc");
+        assert_eq!(studly_caps_filename("a"), "a");
+    }
+
+    #[test]
     fn test_transform_remove_prefix() {
         let remove_prefix_transform = TransformType::RemovePrefix("IMG_".to_string());
         assert_eq!(
@@ -627,6 +862,156 @@ mod tests {
         assert_eq!(
             transform("no_prefix.jpg", &remove_prefix_transform),
             "no_prefix.jpg"
+        );
+    }
+
+    #[test]
+    fn test_split_camel_case_boundaries() {
+        assert_eq!(
+            split_camel_case_boundaries("featureWishList"),
+            vec!["feature", "Wish", "List"]
+        );
+        assert_eq!(
+            split_camel_case_boundaries("XMLDocument"),
+            vec!["XML", "Document"]
+        );
+        assert_eq!(
+            split_camel_case_boundaries("apiEndpoint"),
+            vec!["api", "Endpoint"]
+        );
+        assert_eq!(
+            split_camel_case_boundaries("HelloWorld"),
+            vec!["Hello", "World"]
+        );
+        assert_eq!(
+            split_camel_case_boundaries("camelCase"),
+            vec!["camel", "Case"]
+        );
+        assert_eq!(split_camel_case_boundaries("lowercase"), vec!["lowercase"]);
+        assert_eq!(split_camel_case_boundaries("UPPERCASE"), vec!["UPPERCASE"]);
+    }
+
+    #[test]
+    fn test_split_transformations() {
+        // Test split snake
+        assert_eq!(
+            transform("featureWishList.md", &TransformType::SplitSnake),
+            "feature_wish_list.md"
+        );
+        assert_eq!(
+            transform("XMLDocument.xml", &TransformType::SplitSnake),
+            "xml_document.xml"
+        );
+        assert_eq!(
+            transform("apiEndpoint.ts", &TransformType::SplitSnake),
+            "api_endpoint.ts"
+        );
+
+        // Test split kebab
+        assert_eq!(
+            transform("FeatureWishList.txt", &TransformType::SplitKebab),
+            "feature-wish-list.txt"
+        );
+        assert_eq!(
+            transform("UserSettings.json", &TransformType::SplitKebab),
+            "user-settings.json"
+        );
+
+        // Test split title
+        assert_eq!(
+            transform("myFeatureList.md", &TransformType::SplitTitle),
+            "MyFeatureList.md"
+        );
+        assert_eq!(
+            transform("userSettings.js", &TransformType::SplitTitle),
+            "UserSettings.js"
+        );
+
+        // Test split camel
+        assert_eq!(
+            transform("UserSettings.json", &TransformType::SplitCamel),
+            "userSettings.json"
+        );
+        assert_eq!(
+            transform("FeatureList.py", &TransformType::SplitCamel),
+            "featureList.py"
+        );
+
+        // Test split pascal
+        assert_eq!(
+            transform("userSettings.js", &TransformType::SplitPascal),
+            "UserSettings.js"
+        );
+        assert_eq!(
+            transform("apiClient.rb", &TransformType::SplitPascal),
+            "ApiClient.rb"
+        );
+
+        // Test split lower
+        assert_eq!(
+            transform("XMLDocument.xml", &TransformType::SplitLower),
+            "xmldocument.xml"
+        );
+        assert_eq!(
+            transform("dataProcessor.cpp", &TransformType::SplitLower),
+            "dataprocessor.cpp"
+        );
+
+        // Test split upper
+        assert_eq!(
+            transform("dataProcessor.cpp", &TransformType::SplitUpper),
+            "DATAPROCESSOR.cpp"
+        );
+        assert_eq!(
+            transform("apiClient.js", &TransformType::SplitUpper),
+            "APICLIENT.js"
+        );
+
+        // Test split sentence
+        assert_eq!(
+            transform("HelloWorld.py", &TransformType::SplitSentence),
+            "Helloworld.py"
+        );
+        assert_eq!(
+            transform("featureList.md", &TransformType::SplitSentence),
+            "Featurelist.md"
+        );
+
+        // Test split start
+        assert_eq!(
+            transform("todoList.md", &TransformType::SplitStart),
+            "Todo List.md"
+        );
+        assert_eq!(
+            transform("userProfile.html", &TransformType::SplitStart),
+            "User Profile.html"
+        );
+
+        // Test split studly
+        assert_eq!(
+            transform("HelloWorld.rb", &TransformType::SplitStudly),
+            "hElLoWoRlD.rb"
+        );
+        assert_eq!(
+            transform("apiClient.js", &TransformType::SplitStudly),
+            "aPiClIeNt.js"
+        );
+    }
+
+    #[test]
+    fn test_split_no_boundaries() {
+        // Files without camelCase boundaries should fall back to regular transformation
+        assert_eq!(
+            transform("lowercase.txt", &TransformType::SplitSnake),
+            "lowercase.txt"
+        );
+        assert_eq!(
+            transform("UPPERCASE.txt", &TransformType::SplitKebab),
+            "uppercase.txt"
+        );
+        assert_eq!(
+            transform("already-kebab.txt", &TransformType::SplitSnake),
+            "already_kebab.txt"
         );
     }
 }

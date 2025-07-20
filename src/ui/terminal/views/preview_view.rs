@@ -94,6 +94,15 @@ impl PreviewView {
             TransformType::Clean => {
                 transformers::transform(filename, &transformers::TransformType::Clean)
             }
+            TransformType::Sentence => {
+                transformers::transform(filename, &transformers::TransformType::Sentence)
+            }
+            TransformType::Start => {
+                transformers::transform(filename, &transformers::TransformType::Start)
+            }
+            TransformType::Studly => {
+                transformers::transform(filename, &transformers::TransformType::Studly)
+            }
             TransformType::Replace(find, replace) => transformers::transform(
                 filename,
                 &transformers::TransformType::Replace(find.clone(), replace.clone()),
@@ -106,6 +115,36 @@ impl PreviewView {
                 filename,
                 &transformers::TransformType::RemovePrefix(prefix.clone()),
             ),
+            TransformType::SplitSnake => {
+                transformers::transform(filename, &transformers::TransformType::SplitSnake)
+            }
+            TransformType::SplitKebab => {
+                transformers::transform(filename, &transformers::TransformType::SplitKebab)
+            }
+            TransformType::SplitTitle => {
+                transformers::transform(filename, &transformers::TransformType::SplitTitle)
+            }
+            TransformType::SplitCamel => {
+                transformers::transform(filename, &transformers::TransformType::SplitCamel)
+            }
+            TransformType::SplitPascal => {
+                transformers::transform(filename, &transformers::TransformType::SplitPascal)
+            }
+            TransformType::SplitLower => {
+                transformers::transform(filename, &transformers::TransformType::SplitLower)
+            }
+            TransformType::SplitUpper => {
+                transformers::transform(filename, &transformers::TransformType::SplitUpper)
+            }
+            TransformType::SplitSentence => {
+                transformers::transform(filename, &transformers::TransformType::SplitSentence)
+            }
+            TransformType::SplitStart => {
+                transformers::transform(filename, &transformers::TransformType::SplitStart)
+            }
+            TransformType::SplitStudly => {
+                transformers::transform(filename, &transformers::TransformType::SplitStudly)
+            }
         }
     }
 }

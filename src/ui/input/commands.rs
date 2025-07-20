@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 /// Command types that can be executed in the application
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum Command {
     /// Change directory
     ChangeDirectory(PathBuf),
@@ -25,6 +26,7 @@ pub enum Command {
 
 /// Types of transformations
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum TransformType {
     /// Convert to snake_case
     Snake,
@@ -45,6 +47,7 @@ pub enum TransformType {
 }
 
 /// Parse a command string
+#[allow(dead_code)]
 pub fn parse_command(command: &str) -> Option<Command> {
     let trimmed = command.trim();
 

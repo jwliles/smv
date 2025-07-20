@@ -61,6 +61,10 @@ Convert filenames to UPPERCASE
 .B clean
 Clean up spaces and special characters
 .TP
+.B split
+.I TRANSFORMATION
+Split camelCase/PascalCase then apply transformation
+.TP
 .B CHANGE
 .I "old"
 .B INTO
@@ -203,6 +207,12 @@ Clean up media filenames recursively:
 .TP
 Convert config files to title case:
 .B smv title . FOR:configs \-p
+.TP
+Split camelCase files and convert to snake_case:
+.B smv split snake . EXT:js \-p
+.TP
+Split PascalCase files and convert to kebab-case:
+.B smv split kebab . FOR:scripts \-r
 .SS Advanced Filtering
 .TP
 Transform large text files only:
@@ -287,6 +297,18 @@ T}
 upper|Convert to UPPERCASE|T{
 .ad l
 myFile.txt → MYFILE.TXT
+T}
+split snake|Split camelCase/PascalCase then convert to snake_case|T{
+.ad l
+featureWishList.md → feature_wish_list.md
+T}
+split kebab|Split camelCase/PascalCase then convert to kebab-case|T{
+.ad l
+UserSettings.json → user-settings.json
+T}
+split title|Split camelCase/PascalCase then convert to Title Case|T{
+.ad l
+apiEndpoint.ts → ApiEndpoint.ts
 T}
 .TE
 .SH SIZE UNITS

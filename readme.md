@@ -17,6 +17,7 @@ A powerful, Rust-based CNP (Canopy) ecosystem tool that replaces the standard Un
   - Convert to PascalCase (`document_name.pdf` → `DocumentName.pdf`)
   - Convert to lowercase or UPPERCASE
   - Clean up spaces and special characters
+  - **Split camelCase/PascalCase** then apply any transformation (`featureWishList.md` → `feature_wish_list.md`)
 
 ### CNP Ecosystem Integration
 - **Filter Keywords**: `NAME:`, `TYPE:`, `EXT:`, `SIZE>`, `DEPTH<`, `MODIFIED>`, `ACCESSED<`
@@ -81,6 +82,10 @@ smv lower . MODIFIED>2024-01-01 -r       # Files modified after Jan 1, 2024
 # Prefix removal
 smv CHANGE "IMG_" INTO "" . EXT:jpg -p    # Remove "IMG_" prefix from all JPG files
 smv CHANGE "DSC" INTO "" . EXT:png        # Remove "DSC" prefix from PNG files
+
+# Split camelCase/PascalCase then transform
+smv split snake . EXT:md -p              # Split camelCase files then convert to snake_case
+smv split kebab . EXT:js TYPE:file       # Split PascalCase files then convert to kebab-case
 ```
 
 #### Advanced CNP Features
@@ -301,7 +306,7 @@ Commands:
 smv <COMMAND> <PATH> [FILTERS] [ROUTES] [FLAGS]
 ```
 
-**Commands**: `snake`, `kebab`, `pascal`, `camel`, `title`, `lower`, `upper`, `clean`, `CHANGE "old" INTO "new"`, `CHANGE "prefix" INTO ""` (prefix removal), `REGEX "pattern" INTO "replacement"`
+**Commands**: `snake`, `kebab`, `pascal`, `camel`, `title`, `lower`, `upper`, `clean`, `split TRANSFORMATION`, `CHANGE "old" INTO "new"`, `CHANGE "prefix" INTO ""` (prefix removal), `REGEX "pattern" INTO "replacement"`
 
 **Filters**:
 - `NAME:value` - Match filenames containing value  
@@ -345,6 +350,7 @@ Options:
 - `lower` - Convert to lowercase
 - `upper` - Convert to UPPERCASE
 - `clean` - Clean up spaces and special characters
+- `split TRANSFORMATION` - Split camelCase/PascalCase then apply transformation
 
 ## Transformations
 
@@ -358,6 +364,9 @@ Options:
 | `pascal` | Convert to PascalCase | `my_file.txt` → `MyFile.txt` |
 | `lower` | Convert to lowercase | `MyFile.txt` → `myfile.txt` |
 | `upper` | Convert to UPPERCASE | `myFile.txt` → `MYFILE.TXT` |
+| `split snake` | Split camelCase/PascalCase then convert to snake_case | `featureWishList.md` → `feature_wish_list.md` |
+| `split kebab` | Split camelCase/PascalCase then convert to kebab-case | `UserSettings.json` → `user-settings.json` |
+| `split title` | Split camelCase/PascalCase then convert to Title Case | `apiEndpoint.ts` → `ApiEndpoint.ts` |
 | `CHANGE "prefix" INTO ""` | Remove prefix from filename | `IMG_1234.jpg` → `1234.jpg` |
 
 ## Safety Features

@@ -23,63 +23,70 @@ use repl::InteractiveSession;
 use transformers::{TransformType, transform};
 use ui::UserInterface;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(
     author,
     version,
     about = "Smart Move - Enhanced file operations with XFD syntax",
     long_about = "CNP Smart Move (SMV) - Enhanced file operations with transformations
 
-SYNTAX:
-  smv [COMMAND] [OPTIONS] [TARGET] [FLAGS]
+▶ Default Behavior: Operates on files only (directories excluded)
+  Use -e/--everything to include directories
+
+═══════════════════════════════════════════════════════════════════════════════
 
 COMMANDS:
-  CHANGE \"old\" INTO \"new\" [target]  Replace substring in filenames (use empty \"\" to remove prefix)
-  snake, kebab, pascal, camel           Transform filename case/format
-  sort, group, flatten                  Organize files
-  mv source destination                 Move files/directories
-  cp source destination                 Copy files/directories
-  rm targets...                         Remove files/directories
-  rm path FILTER... [-flags]           Query-based deletion with CNP filters
-  -cd directories...                    Create directories (flag combo)
-  -cF files...                          Create/touch files (flag combo)
-  interactive, tui, undo                Special modes
+  snake, kebab, pascal, camel, title, sentence, start, studly, lower, upper    Transform filename case/format
+  split TRANSFORMATION [target]                      Split camelCase/PascalCase then transform
+  transformation file.txt                             Transform specific file
+  CHANGE \"old\" INTO \"new\" [target]                  Replace substring in filenames
+  mv source destination                               Move files/directories  
+  cp source destination                               Copy files/directories
+  rm targets...                                       Remove files/directories
+  interactive, tui                                    Launch interactive modes
 
-FLAGS:
-  -r       Recursive (process subdirectories)
-  -p       Preview (show changes without applying)
-  -f       Force (skip confirmations/overwrite files)
-  -n       No-clobber (do not overwrite existing files)
-  -i       Case-insensitive pattern matching
-  -I       Interactive mode
-  -T       Terminal UI mode
-  -u       Undo last operation
-  -v       Verbose output
-  -a       Include hidden files (default: excluded)
-  --preserve  Preserve file attributes
+FLAGS: (alphabetical)
+  -a, --hidden        Include hidden files (default: excluded)
+  -c                  Create (combine with -d for directories, -f for files)  
+  -d                  Directory creation (use with -c)
+  -e, --everything    Process everything (files and directories)
+  -f                  File creation (use with -c)
+  -F                  Force (skip confirmations/overwrite files)
+  -i                  Case-insensitive pattern matching
+  -I                  Interactive mode
+  -L                  Dereference symbolic links
+  -n                  No-clobber (do not overwrite existing files)
+  -p                  Preview (show changes without applying)
+  -P                  Do not follow symbolic links  
+  -r                  Recursive (process subdirectories)
+  -T                  Terminal UI mode
+  -u                  Undo last operation
+  -v, --verbose       Verbose output
+
+ARGUMENTS:
+  [TARGET]            Target directory or file pattern (default: current directory)
+  [FILTERS]           CNP filters: NAME:pattern, EXT:ext, TYPE:file/dir, SIZE>1MB
+
+OPTIONS:
+  --preserve          Preserve file attributes (mode, ownership, timestamps)
+  --exclude PATTERNS  Comma-separated patterns to exclude (e.g., \"*.tmp,test_*\")
+  --max-history-size  Maximum operations to keep in history (default: 50)
 
 EXAMPLES:
-  smv snake . -rp                      # Preview snake_case transformation
-  smv CHANGE \"old\" INTO \"new\" . -r    # Replace substring in filenames
-  smv CHANGE \"IMG_\" INTO \"\" . -rp      # Preview removal of IMG_ prefix from all files
-  smv CHANGE \"DSC_\" INTO \"\" pictures/  # Remove DSC_ prefix from files in pictures/
-  smv mv file.txt newname.txt          # Move/rename file
-  smv cp *.txt backup/ -r              # Copy files recursively
-  smv rm . NAME:- -p                   # Preview delete files containing \"-\"
-  smv rm . 'NAME:index_of*' -rip       # Delete files starting with \"index_of\" (case-insensitive)
-  smv rm . EXT:log                     # Delete all .log files
-  smv rm . 'NAME:*Test*' -i            # Delete files containing \"test\" (any case)
-  smv rm . TYPE:file SIZE>1MB -r       # Delete files larger than 1MB recursively
+  smv snake .                          # Transform files to snake_case  
+  smv title cargo.toml                 # Transform specific file (cargo.toml → Cargo.toml)
+  smv kebab My_Document.txt -p         # Preview specific file transformation
+  smv split snake .                    # Split camelCase/PascalCase then apply snake_case
+  smv split kebab featureList.md -p    # Preview: featureList.md → feature-list.md
+  smv snake . -e                       # Transform files AND directories
+  smv CHANGE \"IMG_\" INTO \"\" . -rp      # Preview remove IMG_ prefix recursively
+  smv mv file.txt newname.txt          # Rename file
+  smv rm . EXT:log -p                  # Preview delete all .log files
   smv -cd newdir                       # Create directory
-  smv -cF newfile.txt                  # Create file
-  smv -cF edt_pitch.md                 # Create markdown file
-  smv tui                              # Launch terminal UI
-  smv -I                               # Interactive mode
-  
-  Note: For -cF flag, put flags BEFORE filenames.
-  WRONG: smv . -cF filename.txt         # This treats '.' as a file to create!
+  smv -cf newfile.txt                  # Create file
+  smv tui                              # Launch file explorer UI
 
-Use 'smv --help' for full documentation."
+Use 'smv --help' for complete documentation."
 )]
 struct Args {
     // === XFD COMMAND SYNTAX ===
@@ -115,7 +122,7 @@ struct Args {
     #[arg(short = 'p', action = ArgAction::SetTrue, help = "Preview - show changes without applying")]
     preview: bool,
 
-    #[arg(short = 'f', action = ArgAction::SetTrue, help = "Force - skip confirmations")]
+    #[arg(short = 'F', action = ArgAction::SetTrue, help = "Force - skip confirmations")]
     force: bool,
 
     #[arg(short = 'i', action = ArgAction::SetTrue, help = "Case-insensitive pattern matching")]
@@ -139,7 +146,7 @@ struct Args {
     #[arg(short = 'd', action = ArgAction::SetTrue, help = "Directory - when combined with -c, creates directories")]
     directory: bool,
 
-    #[arg(short = 'F', action = ArgAction::SetTrue, help = "File - when combined with -c, creates/touches files")]
+    #[arg(short = 'f', action = ArgAction::SetTrue, help = "File - when combined with -c, creates/touches files")]
     file_flag: bool,
 
     // === BASIC FILE OPERATIONS ===
@@ -163,6 +170,9 @@ struct Args {
 
     #[arg(short = 'a', long = "hidden", action = ArgAction::SetTrue, help = "Include hidden files (default: excluded)")]
     hidden: bool,
+
+    #[arg(short = 'e', long = "everything", action = ArgAction::SetTrue, help = "Process everything (files and directories)")]
+    everything: bool,
 
     #[arg(
         short = 'm',
@@ -288,6 +298,56 @@ enum SortMethod {
 }
 
 fn parse_xfd_command(args: &Args) -> Result<XfdCommand, Box<dyn Error>> {
+    // Handle transformation commands with special argument parsing
+    // For commands like "smv title file.txt -p", we need to move arg1 to target
+    let mut adjusted_args = args.clone();
+    if let Some(ref command) = args.command {
+        if matches!(
+            command.as_str(),
+            "snake"
+                | "kebab"
+                | "pascal"
+                | "camel"
+                | "title"
+                | "sentence"
+                | "start"
+                | "studly"
+                | "lower"
+                | "upper"
+                | "clean"
+        ) {
+            // This is a transformation command - rearrange arguments for natural syntax
+            if let Some(ref arg1) = args.arg1 {
+                // Move arg1 to target position
+                adjusted_args.target = Some(arg1.clone());
+                adjusted_args.arg1 = None;
+
+                // Move flags and other arguments to proper positions
+                if let Some(ref into_keyword) = args.into_keyword {
+                    if into_keyword.starts_with('-') {
+                        // This is a flag, move it to args
+                        adjusted_args.args.insert(0, into_keyword.clone());
+                        adjusted_args.into_keyword = None;
+                    }
+                }
+
+                // Move arg2 to args if present
+                if let Some(ref arg2) = args.arg2 {
+                    adjusted_args.args.push(arg2.clone());
+                    adjusted_args.arg2 = None;
+                }
+            }
+        } else if command == "split" {
+            // For split commands, arg1 is the transformation type, arg2/target is the file/directory
+            if let Some(ref arg2) = args.arg2 {
+                // Move arg2 to target position
+                adjusted_args.target = Some(arg2.clone());
+                adjusted_args.arg2 = None;
+            }
+        }
+    }
+    let args = &adjusted_args;
+
     // Check for composable flags first (highest priority)
     if args.create && args.directory {
         // -cd flag combination: create directories
@@ -321,7 +381,7 @@ fn parse_xfd_command(args: &Args) -> Result<XfdCommand, Box<dyn Error>> {
     }
 
     if args.create && args.file_flag {
-        // -cF flag combination: create/touch files
+        // -cf flag combination: create/touch files
         let mut files = Vec::new();
 
         // Collect file names from all possible argument positions
@@ -409,9 +469,32 @@ fn parse_xfd_command(args: &Args) -> Result<XfdCommand, Box<dyn Error>> {
         Some("pascal") => Ok(XfdCommand::Transform(TransformType::Pascal)),
         Some("camel") => Ok(XfdCommand::Transform(TransformType::Camel)),
         Some("title") => Ok(XfdCommand::Transform(TransformType::Title)),
+        Some("sentence") => Ok(XfdCommand::Transform(TransformType::Sentence)),
+        Some("start") => Ok(XfdCommand::Transform(TransformType::Start)),
+        Some("studly") => Ok(XfdCommand::Transform(TransformType::Studly)),
         Some("lower") => Ok(XfdCommand::Transform(TransformType::Lower)),
         Some("upper") => Ok(XfdCommand::Transform(TransformType::Upper)),
         Some("clean") => Ok(XfdCommand::Transform(TransformType::Clean)),
+        Some("split") => {
+            // Handle split commands: "split snake", "split kebab", etc.
+            let transform_type = args
+                .arg1
+                .as_deref()
+                .ok_or("Missing transformation type after 'split'")?;
+            match transform_type {
+                "snake" => Ok(XfdCommand::Transform(TransformType::SplitSnake)),
+                "kebab" => Ok(XfdCommand::Transform(TransformType::SplitKebab)),
+                "title" => Ok(XfdCommand::Transform(TransformType::SplitTitle)),
+                "camel" => Ok(XfdCommand::Transform(TransformType::SplitCamel)),
+                "pascal" => Ok(XfdCommand::Transform(TransformType::SplitPascal)),
+                "sentence" => Ok(XfdCommand::Transform(TransformType::SplitSentence)),
+                "start" => Ok(XfdCommand::Transform(TransformType::SplitStart)),
+                "studly" => Ok(XfdCommand::Transform(TransformType::SplitStudly)),
+                "lower" => Ok(XfdCommand::Transform(TransformType::SplitLower)),
+                "upper" => Ok(XfdCommand::Transform(TransformType::SplitUpper)),
+                _ => Err(format!("Unknown split transformation: {transform_type}").into()),
+            }
+        }
         Some("sort") => Ok(XfdCommand::Sort {
             method: SortMethod::Group,
         }), // Default sort method
@@ -1065,8 +1148,18 @@ fn run_undo_mode(max_history_size: usize) -> Result<(), Box<dyn Error>> {
 
 /// Run transform command using XFD syntax
 fn run_transform_command(args: &Args, transform_type: TransformType) -> Result<(), Box<dyn Error>> {
-    // Get target directory or pattern (default to current directory)
-    let target = args.target.as_deref().unwrap_or(".");
+    // For transformation commands, check if arg1 contains a filename when target is not specified
+    let target = if let Some(ref arg1) = args.arg1 {
+        // Check if arg1 is a file (for natural syntax like "smv title file.txt")
+        let arg1_path = Path::new(arg1);
+        if arg1_path.exists() && arg1_path.is_file() {
+            arg1.as_str()
+        } else {
+            args.target.as_deref().unwrap_or(".")
+        }
+    } else {
+        args.target.as_deref().unwrap_or(".")
+    };
 
     // Detect if target is a glob pattern or directory
     let is_glob_pattern = target.contains('*') || target.contains('?') || target.contains('[');
@@ -1083,11 +1176,17 @@ fn run_transform_command(args: &Args, transform_type: TransformType) -> Result<(
             (".".to_string(), Some(target.to_string()))
         }
     } else {
-        // Validate directory exists
-        if !Path::new(target).exists() {
-            return Err(format!("Directory does not exist: {target}").into());
+        // Check if target is a specific file or directory
+        let target_path = Path::new(target);
+        if target_path.is_file() {
+            // Single file transformation
+            return run_transform_target_command(args, transform_type, target);
+        } else if target_path.is_dir() {
+            // Directory transformation
+            (target.to_string(), None)
+        } else {
+            return Err(format!("Path does not exist: {target}").into());
         }
-        (target.to_string(), None)
     };
 
     // Get extensions from args (legacy support)
@@ -1162,6 +1261,7 @@ fn run_transform_command(args: &Args, transform_type: TransformType) -> Result<(
             args.recursive,
             &exclude_patterns,
             args.hidden,
+            !args.everything,
         )?
     } else {
         build_file_list(
@@ -1170,6 +1270,7 @@ fn run_transform_command(args: &Args, transform_type: TransformType) -> Result<(
             args.recursive,
             &exclude_patterns,
             args.hidden,
+            !args.everything,
         )?
     };
 
@@ -1222,6 +1323,7 @@ fn build_file_list(
     recursive: bool,
     exclude_patterns: &[regex::Regex],
     include_hidden: bool,
+    files_only: bool,
 ) -> Result<Vec<std::path::PathBuf>, Box<dyn Error>> {
     use walkdir::WalkDir;
 
@@ -1267,6 +1369,11 @@ fn build_file_list(
         // For directories, we always include them regardless of extension filters
         // since directories don't have extensions
 
+        // Apply files-only filter if enabled
+        if files_only && path.is_dir() {
+            continue;
+        }
+
         // Check exclude patterns
         let path_str = path.to_string_lossy();
         if exclude_patterns
@@ -1289,6 +1396,7 @@ fn build_file_list_with_dsc(
     recursive: bool,
     exclude_patterns: &[regex::Regex],
     include_hidden: bool,
+    files_only: bool,
 ) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
@@ -1382,6 +1490,11 @@ fn build_file_list_with_dsc(
                     continue;
                 }
             }
+        }
+
+        // Apply files-only filter if enabled
+        if files_only && path.is_dir() {
+            continue;
         }
 
         // Apply exclude patterns
@@ -1501,6 +1614,103 @@ fn print_transformation_results(stats: &Stats, preview_only: bool) {
             "To apply these changes, run the same command without --preview.".blue()
         );
     }
+}
+
+/// Run transformation on a specific target file
+fn run_transform_target_command(
+    args: &Args,
+    transform_type: TransformType,
+    target_file: &str,
+) -> Result<(), Box<dyn Error>> {
+    use crate::transformers::transform;
+    use std::fs;
+
+    // Verify the target file exists
+    let target_path = Path::new(target_file);
+    if !target_path.exists() {
+        return Err(format!("File does not exist: {}", target_file).into());
+    }
+
+    // Get the filename to transform
+    let filename = target_path
+        .file_name()
+        .ok_or("Invalid file path")?
+        .to_string_lossy();
+
+    // Apply transformation
+    let new_filename = transform(&filename, &transform_type);
+
+    // Check if transformation actually changed the name
+    if filename == new_filename {
+        println!(
+            "No change needed: {} -> {}",
+            filename.green(),
+            new_filename.green()
+        );
+        return Ok(());
+    }
+
+    // Construct new path
+    let new_path = if let Some(parent) = target_path.parent() {
+        parent.join(&new_filename)
+    } else {
+        PathBuf::from(&new_filename)
+    };
+
+    println!(
+        "\n{}",
+        format!(
+            "CNP Smart Move - {} Mode (Target: {})",
+            if args.preview { "Preview" } else { "Transform" },
+            target_file
+        )
+        .bold()
+    );
+    println!("Transformation: {}", transform_type.as_str().green());
+
+    // Show the transformation
+    println!("\n{} -> {}", filename.yellow(), new_filename.green());
+
+    if args.preview {
+        println!("\n{}", "Preview mode - no changes made".blue());
+        return Ok(());
+    }
+
+    // Check if destination exists and handle conflicts
+    if new_path.exists() {
+        if !args.force {
+            let should_continue = if args.interactive {
+                println!("File already exists: {}", new_path.display());
+                print!("Overwrite? (y/n): ");
+                use std::io::{self, Write};
+                io::stdout().flush()?;
+                let mut input = String::new();
+                io::stdin().read_line(&mut input)?;
+                input.trim().to_lowercase() == "y"
+            } else {
+                false
+            };
+
+            if !should_continue {
+                println!(
+                    "Operation cancelled - file already exists: {}",
+                    new_path.display()
+                );
+                return Ok(());
+            }
+        }
+    }
+
+    // Perform the rename
+    fs::rename(target_path, &new_path).map_err(|e| format!("Failed to rename file: {}", e))?;
+
+    println!(
+        "✓ Renamed: {} -> {}",
+        filename.yellow(),
+        new_filename.green()
+    );
+
+    Ok(())
 }
 
 /// Run sort command using XFD syntax
@@ -1659,7 +1869,7 @@ fn run_cnp_command(args: &Args) -> Result<(), Box<dyn Error>> {
         cnp_args.push("-p".to_string());
     }
     if args.force {
-        cnp_args.push("-f".to_string());
+        cnp_args.push("-F".to_string());
     }
     if args.case_insensitive {
         cnp_args.push("-i".to_string());
@@ -1736,6 +1946,9 @@ fn run_cnp_command(args: &Args) -> Result<(), Box<dyn Error>> {
             "pascal" => TransformType::Pascal,
             "camel" => TransformType::Camel,
             "title" => TransformType::Title,
+            "sentence" => TransformType::Sentence,
+            "start" => TransformType::Start,
+            "studly" => TransformType::Studly,
             "lower" => TransformType::Lower,
             "upper" => TransformType::Upper,
             "clean" => TransformType::Clean,
@@ -1802,6 +2015,7 @@ fn run_cnp_transform_command(
         recursive,
         include_hidden,
         cnp_command.case_insensitive,
+        false, // files_only disabled for CNP commands - they handle this through TYPE:file filters
     )?;
 
     if files.is_empty() {
@@ -1828,6 +2042,7 @@ fn build_cnp_file_list(
     recursive: bool,
     include_hidden: bool,
     case_insensitive: bool,
+    files_only: bool,
 ) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     use cnp_grammar::{FileType, Filter};
     use walkdir::WalkDir;
@@ -2033,7 +2248,12 @@ fn build_cnp_file_list(
         }
 
         if matches {
-            items.push(entry_path.to_path_buf());
+            // Apply files-only filter if enabled
+            if files_only && entry_path.is_dir() {
+                // Skip directories if files-only is enabled
+            } else {
+                items.push(entry_path.to_path_buf());
+            }
         }
     }
 
@@ -2062,6 +2282,7 @@ fn run_tool_delegation(
         recursive,
         include_hidden,
         cnp_command.case_insensitive,
+        false, // files_only disabled for CNP commands - they handle this through TYPE:file filters
     )?;
 
     if files.is_empty() {
@@ -2081,8 +2302,8 @@ fn run_tool_delegation(
             // For SAY tool, we need to pass the operation type
             if let Some(ref transform_cmd) = cnp_command.transform_command {
                 match transform_cmd.command_type.as_str() {
-                    "snake" | "kebab" | "pascal" | "camel" | "title" | "lower" | "upper"
-                    | "clean" => {
+                    "snake" | "kebab" | "pascal" | "camel" | "title" | "sentence" | "start"
+                    | "studly" | "lower" | "upper" | "clean" => {
                         cmd.arg(&transform_cmd.command_type);
                     }
                     _ => {
@@ -2177,6 +2398,7 @@ fn run_output_to_file(cnp_command: &CnpCommand, file: &str) -> Result<(), Box<dy
         recursive,
         include_hidden,
         cnp_command.case_insensitive,
+        false, // files_only disabled for CNP commands - they handle this through TYPE:file filters
     )?;
 
     if files.is_empty() {
@@ -2233,6 +2455,7 @@ fn run_formatted_output(
         recursive,
         include_hidden,
         cnp_command.case_insensitive,
+        false, // files_only disabled for CNP commands - they handle this through TYPE:file filters
     )?;
 
     if files.is_empty() {
@@ -2407,6 +2630,7 @@ fn run_cnp_remove_command(cnp_command: &CnpCommand) -> Result<(), Box<dyn Error>
         recursive,
         include_hidden,
         cnp_command.case_insensitive,
+        false, // files_only disabled for CNP commands - they handle this through TYPE:file filters
     )?;
 
     if files.is_empty() {

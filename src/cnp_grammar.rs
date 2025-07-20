@@ -181,22 +181,22 @@ impl CnpGrammarParser {
             let extension = &pattern[2..];
             return Ok(Some(Filter::Extension(extension.to_string())));
         }
-        
+
         // Handle patterns like *filename* -> NAME:filename
         if pattern.starts_with('*') && pattern.ends_with('*') && pattern.len() > 2 {
-            let name_part = &pattern[1..pattern.len()-1];
+            let name_part = &pattern[1..pattern.len() - 1];
             if !name_part.contains('*') && !name_part.contains('?') {
                 return Ok(Some(Filter::Name(name_part.to_string())));
             }
         }
-        
+
         // Handle patterns like filename* -> NAME:filename (startswith)
-        if pattern.ends_with('*') && !pattern[..pattern.len()-1].contains('*') {
-            let name_part = &pattern[..pattern.len()-1];
+        if pattern.ends_with('*') && !pattern[..pattern.len() - 1].contains('*') {
+            let name_part = &pattern[..pattern.len() - 1];
             return Ok(Some(Filter::Name(format!("{}*", name_part))));
         }
-        
-        // Handle patterns like *filename -> NAME:filename (endswith)  
+
+        // Handle patterns like *filename -> NAME:filename (endswith)
         if pattern.starts_with('*') && !pattern[1..].contains('*') {
             let name_part = &pattern[1..];
             return Ok(Some(Filter::Name(format!("*{}", name_part))));
@@ -217,39 +217,39 @@ impl CnpGrammarParser {
         }
 
         // Handle SIZE comparisons
-        if arg.starts_with("SIZE>") {
-            return Ok(Some(Filter::SizeGreater(arg[5..].to_string())));
+        if let Some(stripped) = arg.strip_prefix("SIZE>") {
+            return Ok(Some(Filter::SizeGreater(stripped.to_string())));
         }
-        if arg.starts_with("SIZE<") {
-            return Ok(Some(Filter::SizeLess(arg[5..].to_string())));
+        if let Some(stripped) = arg.strip_prefix("SIZE<") {
+            return Ok(Some(Filter::SizeLess(stripped.to_string())));
         }
 
         // Handle DEPTH comparisons
-        if arg.starts_with("DEPTH>") {
-            let value = arg[6..].parse::<usize>().map_err(|_| GrammarParseError {
-                message: format!("Invalid depth value: {}", &arg[6..]),
+        if let Some(stripped) = arg.strip_prefix("DEPTH>") {
+            let value = stripped.parse::<usize>().map_err(|_| GrammarParseError {
+                message: format!("Invalid depth value: {}", stripped),
             })?;
             return Ok(Some(Filter::DepthGreater(value)));
         }
-        if arg.starts_with("DEPTH<") {
-            let value = arg[6..].parse::<usize>().map_err(|_| GrammarParseError {
-                message: format!("Invalid depth value: {}", &arg[6..]),
+        if let Some(stripped) = arg.strip_prefix("DEPTH<") {
+            let value = stripped.parse::<usize>().map_err(|_| GrammarParseError {
+                message: format!("Invalid depth value: {}", stripped),
             })?;
             return Ok(Some(Filter::DepthLess(value)));
         }
 
         // Handle timestamp comparisons
-        if arg.starts_with("MODIFIED>") {
-            return Ok(Some(Filter::ModifiedAfter(arg[9..].to_string())));
+        if let Some(stripped) = arg.strip_prefix("MODIFIED>") {
+            return Ok(Some(Filter::ModifiedAfter(stripped.to_string())));
         }
-        if arg.starts_with("MODIFIED<") {
-            return Ok(Some(Filter::ModifiedBefore(arg[9..].to_string())));
+        if let Some(stripped) = arg.strip_prefix("MODIFIED<") {
+            return Ok(Some(Filter::ModifiedBefore(stripped.to_string())));
         }
-        if arg.starts_with("ACCESSED>") {
-            return Ok(Some(Filter::AccessedAfter(arg[9..].to_string())));
+        if let Some(stripped) = arg.strip_prefix("ACCESSED>") {
+            return Ok(Some(Filter::AccessedAfter(stripped.to_string())));
         }
-        if arg.starts_with("ACCESSED<") {
-            return Ok(Some(Filter::AccessedBefore(arg[9..].to_string())));
+        if let Some(stripped) = arg.strip_prefix("ACCESSED<") {
+            return Ok(Some(Filter::AccessedBefore(stripped.to_string())));
         }
 
         // Handle colon-separated filters
@@ -388,12 +388,12 @@ impl CnpGrammarParser {
             }
             "snake" | "kebab" | "pascal" | "camel" | "title" | "lower" | "upper" | "clean" => {
                 *i += 1;
-                
+
                 // Check if the next argument is a glob pattern and convert it to a filter
                 if *i < args.len() && Self::is_glob_pattern(&args[*i]) {
                     // Don't consume the glob pattern here - let it be processed by the main parser loop
                 }
-                
+
                 return Ok(Some(TransformCommand {
                     command_type: arg.clone(),
                     old_value: None,
@@ -485,7 +485,7 @@ mod tests {
         assert!(CnpGrammarParser::is_glob_pattern("file?.log"));
         assert!(CnpGrammarParser::is_glob_pattern("file[0-9].txt"));
         assert!(CnpGrammarParser::is_glob_pattern("file{a,b,c}.txt"));
-        
+
         // Test non-glob patterns
         assert!(!CnpGrammarParser::is_glob_pattern("file.txt"));
         assert!(!CnpGrammarParser::is_glob_pattern("directory"));
@@ -504,7 +504,7 @@ mod tests {
             CnpGrammarParser::convert_glob_to_filter("*.org")?,
             Some(Filter::Extension("org".to_string()))
         );
-        
+
         // Test name patterns
         assert_eq!(
             CnpGrammarParser::convert_glob_to_filter("*filename*")?,
@@ -518,46 +518,55 @@ mod tests {
             CnpGrammarParser::convert_glob_to_filter("*suffix")?,
             Some(Filter::Name("*suffix".to_string()))
         );
-        
+
         // Test complex patterns
         assert_eq!(
             CnpGrammarParser::convert_glob_to_filter("file?.txt")?,
             Some(Filter::Name("file?.txt".to_string()))
         );
-        
+
         Ok(())
     }
 
     #[test]
     fn test_glob_pattern_parsing() -> Result<(), Box<dyn std::error::Error>> {
         // Test transform command with glob pattern
-        let args = vec!["title".to_string(), "*.org".to_string(), "test_dir".to_string()];
+        let args = vec![
+            "title".to_string(),
+            "*.org".to_string(),
+            "test_dir".to_string(),
+        ];
         let result = CnpGrammarParser::parse(&args)?;
-        
+
         assert_eq!(result.path, "test_dir");
         assert!(result.transform_command.is_some());
         assert_eq!(result.transform_command.unwrap().command_type, "title");
         assert_eq!(result.filters.len(), 1);
-        
+
         match &result.filters[0] {
             Filter::Extension(ext) => assert_eq!(ext, "org"),
             _ => panic!("Expected Extension filter"),
         }
-        
+
         Ok(())
     }
 
     #[test]
     fn test_multiple_glob_patterns() -> Result<(), Box<dyn std::error::Error>> {
         // Test multiple glob patterns
-        let args = vec!["kebab".to_string(), "*.txt".to_string(), "*.md".to_string(), ".".to_string()];
+        let args = vec![
+            "kebab".to_string(),
+            "*.txt".to_string(),
+            "*.md".to_string(),
+            ".".to_string(),
+        ];
         let result = CnpGrammarParser::parse(&args)?;
-        
+
         assert_eq!(result.path, ".");
         assert!(result.transform_command.is_some());
         assert_eq!(result.transform_command.unwrap().command_type, "kebab");
         assert_eq!(result.filters.len(), 2);
-        
+
         // Check both extension filters
         let mut has_txt = false;
         let mut has_md = false;
@@ -569,7 +578,7 @@ mod tests {
             }
         }
         assert!(has_txt && has_md);
-        
+
         Ok(())
     }
 
@@ -583,11 +592,11 @@ mod tests {
             "src".to_string(),
         ];
         let result = CnpGrammarParser::parse(&args)?;
-        
+
         assert_eq!(result.path, "src");
         assert!(result.transform_command.is_some());
         assert_eq!(result.filters.len(), 2);
-        
+
         // Check we have both extension and type filters
         let mut has_ext = false;
         let mut has_type = false;
@@ -599,7 +608,7 @@ mod tests {
             }
         }
         assert!(has_ext && has_type);
-        
+
         Ok(())
     }
 
@@ -611,19 +620,19 @@ mod tests {
             CnpGrammarParser::convert_glob_to_filter("*.*")?,
             Some(Filter::Name(".".to_string()))
         );
-        
+
         // Complex extension patterns fall back to Name filter
         assert_eq!(
             CnpGrammarParser::convert_glob_to_filter("*.tar.gz")?,
             Some(Filter::Name("*.tar.gz".to_string()))
         );
-        
+
         // Single * becomes a generic Name filter
         assert_eq!(
             CnpGrammarParser::convert_glob_to_filter("*")?,
             Some(Filter::Name("*".to_string()))
         );
-        
+
         Ok(())
     }
 }
