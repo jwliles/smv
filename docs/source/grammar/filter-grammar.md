@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326271
+title: filter-grammar
+id: 72fc0854-2b8e-428f-9f49-3672b9ba6aeb
+hash: d62796da4402e5196359a6815f7103e6c1c4b56fb4a69a711b854073d6b1651a
+---
 # CNP Filter Grammar Specification
 
 This document defines the **CNP command-line interface grammar**, a universal syntax model for declarative file filtering across CNP tools.

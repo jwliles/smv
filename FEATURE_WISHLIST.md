@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326138
+title: FEATURE_WISHLIST
+id: 1c72ce63-d034-4d7c-8c0b-8a0a56469869
+hash: 657f1f34acd0a5efdd7c078ff0a5cede7e7bca87f64ee29d2aa76e5a9b3f78cb
+---
 ## 🧱 Core Functionality (Must-Have)
 
 These are *non-negotiables* to match basic POSIX tools.

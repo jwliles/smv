@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326268
+title: overview
+id: 846e5e2c-9157-463e-8a9c-f8e990b1aedf
+hash: 8fdbf34e05cd7c0c62fa17540d0a5ea390fd07b8ecedf05642e8dd98aab2fa01
+---
 # Commands Overview
 
 SMV provides powerful file operations through a consistent command interface.
@@ -21,7 +29,7 @@ Transform filename casing while preserving file extensions.
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `CHANGE "old" INTO "new"` | Replace substring | `CHANGE "IMG_" INTO ""` |
+| `CHANGE: "old" INTO "new"` | Replace substring | `CHANGE: "IMG_" INTO ""` |
 
 ## File Operations
 
@@ -86,7 +94,7 @@ smv rm . NAME:*build* TYPE:dir -rp
 ### Batch Renaming
 ```bash
 # Remove camera prefixes
-smv CHANGE "DSC_" INTO "" ~/Photos -p
+smv CHANGE: "DSC_" INTO "" ~/Photos -p
 
 # Standardize test files
 smv snake . NAME:*test* EXT:js -p

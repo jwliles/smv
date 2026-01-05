@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326180
+title: feature-branch-context
+id: e2f3b3de-a396-4ee9-ba54-1d479bde0aef
+hash: a53b60fe22fa274d9b1fbaaeffb14416dc8486b703350db10a5a3c264dbdab36
+---
 # Feature Branch Context: Directory Organization
 
 ## Completed Work

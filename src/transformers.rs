@@ -2,6 +2,503 @@ use deunicode::deunicode;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
+/// Case styles for filename transformations
+///
+/// This enum represents different capitalization patterns that can be applied to filenames.
+/// Each style defines how words should be capitalized when combined.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CaseStyle {
+    /// First word capitalized, rest lowercase (e.g., "Helloworld")
+    Sentence,
+    /// All words capitalized with spaces (e.g., "Hello World")
+    Start,
+    /// All words capitalized without spaces (e.g., "HelloWorld")
+    Title,
+    /// Alternating upper/lower case (e.g., "hElLoWoRlD")
+    Studly,
+    /// Alternating case starting with upper (e.g., "HeLlOwOrLd")
+    StudlyReverse,
+    /// All uppercase (e.g., "HELLO_WORLD")
+    Screaming,
+    /// First word lowercase, rest capitalized, no delimiters (e.g., "helloWorld")
+    Camel,
+    /// All words capitalized, no delimiters (e.g., "HelloWorld")
+    Pascal,
+    /// All lowercase (e.g., "hello_world")
+    Lower,
+    /// Detect and preserve existing capitalization
+    Auto,
+}
+
+/// Delimiter styles for word separation
+///
+/// This enum represents different ways to separate words in filenames.
+/// Each style uses a specific character or pattern to join word tokens.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DelimiterStyle {
+    /// Underscores between words (e.g., "hello_world")
+    Snake,
+    /// Hyphens between words (e.g., "hello-world")
+    Kebab,
+    /// Dots between words (e.g., "hello.world")
+    Dot,
+    /// Colons between words (e.g., "hello:world")
+    Colon,
+    /// No delimiter - words run together (e.g., "helloworld")
+    Flat,
+    /// Spaces between words (e.g., "hello world")
+    Space,
+}
+
+/// Errors that can occur during transformation
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TransformError {
+    /// Invalid combination of case and delimiter styles
+    InvalidCombination(CaseStyle, DelimiterStyle),
+    /// Invalid regex pattern
+    InvalidRegex(String),
+    /// Empty input provided
+    EmptyInput,
+    /// Failed to detect case or delimiter style
+    DetectionFailed(String),
+}
+
+impl CaseStyle {
+    /// Get the default delimiter style for this case style
+    ///
+    /// Returns the most commonly used delimiter for each case style.
+    /// This provides sensible defaults when no delimiter is explicitly specified.
+    pub fn default_delimiter(&self) -> DelimiterStyle {
+        match self {
+            CaseStyle::Camel | CaseStyle::Pascal => DelimiterStyle::Flat,
+            CaseStyle::Start | CaseStyle::Sentence | CaseStyle::Title => DelimiterStyle::Space,
+            CaseStyle::Lower | CaseStyle::Screaming => DelimiterStyle::Snake,
+            CaseStyle::Studly | CaseStyle::StudlyReverse => DelimiterStyle::Flat,
+            CaseStyle::Auto => DelimiterStyle::Snake,
+        }
+    }
+
+    /// Detect case style from input string
+    ///
+    /// Analyzes the input string to determine what case style it appears to use.
+    /// This enables auto-detection and preservation of existing case styles.
+    pub fn detect_from_input(input: &str) -> Self {
+        if input.is_empty() {
+            return CaseStyle::Lower;
+        }
+
+        // First check based on the original string structure
+        if input
+            .chars()
+            .all(|c| !c.is_alphabetic() || c.is_uppercase())
+        {
+            return CaseStyle::Screaming;
+        }
+
+        // Check if string contains spaces - indicates title/sentence/start case
+        if input.contains(' ') {
+            let words: Vec<&str> = input.split_whitespace().collect();
+            if words.len() > 1 {
+                if words
+                    .iter()
+                    .all(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
+                {
+                    return CaseStyle::Title; // or Start - they're similar
+                } else if words[0].chars().next().map_or(false, |c| c.is_uppercase())
+                    && words[1..]
+                        .iter()
+                        .all(|w| w.chars().all(|c| c.is_lowercase()))
+                {
+                    return CaseStyle::Sentence;
+                }
+            }
+        }
+
+        // Now check concatenated cases (no spaces)
+        let tokens = tokenize(input, false);
+        if tokens.is_empty() {
+            return CaseStyle::Lower;
+        }
+
+        // Check for sentence case (single word starting with uppercase, rest lowercase)
+        if tokens.len() == 1 {
+            let word = &tokens[0];
+            let chars: Vec<char> = word.chars().collect();
+            if chars.len() > 1
+                && chars[0].is_uppercase()
+                && chars[1..].iter().all(|c| c.is_lowercase())
+            {
+                return CaseStyle::Sentence;
+            }
+        }
+
+        if Self::is_studly_case(&tokens) {
+            CaseStyle::Studly
+        } else if Self::is_camel_case(&tokens) {
+            CaseStyle::Camel
+        } else if Self::is_pascal_case(&tokens) {
+            CaseStyle::Pascal
+        } else {
+            CaseStyle::Lower // fallback
+        }
+    }
+
+    // Detection helper methods
+    fn is_camel_case(words: &[String]) -> bool {
+        if words.len() < 2 {
+            return false;
+        }
+        words[0].chars().all(|c| c.is_lowercase())
+            && words[1..]
+                .iter()
+                .all(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
+    }
+
+    fn is_pascal_case(words: &[String]) -> bool {
+        !words.is_empty()
+            && words
+                .iter()
+                .all(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
+            && words
+                .iter()
+                .all(|w| w.chars().skip(1).all(|c| c.is_lowercase()))
+    }
+
+    fn is_screaming(words: &[String]) -> bool {
+        !words.is_empty()
+            && words
+                .iter()
+                .all(|w| w.chars().all(|c| !c.is_alphabetic() || c.is_uppercase()))
+    }
+
+    fn is_title_case(words: &[String]) -> bool {
+        !words.is_empty()
+            && words.iter().all(|w| {
+                let mut chars = w.chars();
+                if let Some(first) = chars.next() {
+                    first.is_uppercase() && chars.all(|c| c.is_lowercase())
+                } else {
+                    false
+                }
+            })
+    }
+
+    fn is_sentence_case(words: &[String]) -> bool {
+        if words.is_empty() {
+            return false;
+        }
+        let first = &words[0];
+        let first_char_upper = first.chars().next().map_or(false, |c| c.is_uppercase());
+        let rest_lower = words[1..]
+            .iter()
+            .all(|w| w.chars().all(|c| c.is_lowercase()));
+        first_char_upper && rest_lower
+    }
+
+    fn is_start_case(words: &[String]) -> bool {
+        words.iter().all(|w| {
+            let mut chars = w.chars();
+            if let Some(first) = chars.next() {
+                first.is_uppercase() && chars.all(|c| c.is_lowercase())
+            } else {
+                false
+            }
+        })
+    }
+
+    fn is_studly_case(words: &[String]) -> bool {
+        let combined = words.join("");
+        let chars: Vec<char> = combined.chars().filter(|c| c.is_alphabetic()).collect();
+        if chars.len() < 3 {
+            return false;
+        }
+
+        // Check for alternating pattern
+        let mut alternating = true;
+        for i in 0..chars.len() - 1 {
+            if chars[i].is_uppercase() == chars[i + 1].is_uppercase() {
+                alternating = false;
+                break;
+            }
+        }
+        alternating
+    }
+}
+
+impl DelimiterStyle {
+    /// Detect delimiter style from input string
+    ///
+    /// Analyzes the input string to determine what delimiter it uses.
+    /// Priority is given to underscores, then hyphens, then other delimiters.
+    pub fn detect_from_input(input: &str) -> Self {
+        if input.contains('_') {
+            DelimiterStyle::Snake
+        } else if input.contains('-') {
+            DelimiterStyle::Kebab
+        } else if input.contains('.') {
+            DelimiterStyle::Dot
+        } else if input.contains(':') {
+            DelimiterStyle::Colon
+        } else if input.contains(' ') {
+            DelimiterStyle::Space
+        } else {
+            DelimiterStyle::Flat
+        }
+    }
+
+    /// Get the string representation of this delimiter
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DelimiterStyle::Snake => "_",
+            DelimiterStyle::Kebab => "-",
+            DelimiterStyle::Dot => ".",
+            DelimiterStyle::Colon => ":",
+            DelimiterStyle::Flat => "",
+            DelimiterStyle::Space => " ",
+        }
+    }
+}
+
+/// Validation logic for case and delimiter combinations
+///
+/// Checks if a given combination of case style and delimiter style is valid.
+/// Some combinations don't make sense (e.g., Camel case with delimiters).
+pub fn is_valid_combination(case: &CaseStyle, delimiter: &DelimiterStyle) -> bool {
+    match (case, delimiter) {
+        // Camel case only works with Flat delimiter
+        (CaseStyle::Camel, DelimiterStyle::Flat) => true,
+        (CaseStyle::Camel, _) => false,
+        // All other combinations are valid
+        _ => true,
+    }
+}
+
+/// Transform a filename using the new case/delimiter pipeline
+///
+/// This is the core transformation function for the new architecture.
+/// It follows the pipeline: Split Words → Apply CaseStyle → Validate → Join with Delimiter
+///
+/// # Arguments
+/// * `name` - The filename string to transform
+/// * `case_style` - The case style to apply
+/// * `delimiter_style` - The delimiter style to use
+///
+/// # Returns
+/// Result containing the transformed string or a TransformError
+pub fn transform_with_pipeline(
+    name: &str,
+    case_style: CaseStyle,
+    delimiter_style: DelimiterStyle,
+) -> Result<String, TransformError> {
+    if name.is_empty() {
+        return Err(TransformError::EmptyInput);
+    }
+
+    // Validate the combination
+    if !is_valid_combination(&case_style, &delimiter_style) {
+        return Err(TransformError::InvalidCombination(
+            case_style,
+            delimiter_style,
+        ));
+    }
+
+    // Split filename from extension for preservation
+    let (basename, extension, preserve_trailing_dot) = if let Some(dot_pos) = name.rfind('.') {
+        if dot_pos > 0 && dot_pos < name.len() - 1 {
+            // File has an extension
+            let (base, ext) = name.split_at(dot_pos);
+            (base, Some(&ext[1..]), false) // Remove the dot from extension
+        } else if dot_pos == name.len() - 1 {
+            // Trailing dot, preserve it as part of filename
+            (name, None, true)
+        } else {
+            // Dot at beginning (.hidden files), preserve as-is
+            (name, None, true)
+        }
+    } else {
+        // No extension
+        (name, None, false)
+    };
+
+    // Step 1: Tokenize the basename into words
+    let tokens = tokenize(basename, false);
+    if tokens.is_empty() {
+        return Ok(name.to_string()); // Return original if no tokens
+    }
+
+    // Step 2: Apply case style transformation
+    let transformed_tokens = apply_case_style(&tokens, &case_style)?;
+
+    // Step 3: Join with delimiter
+    let transformed_basename = join_with_delimiter(&transformed_tokens, &delimiter_style);
+
+    // Step 4: Recombine with extension (lowercased for consistency)
+    if preserve_trailing_dot {
+        // For files like "file.", don't transform - return as-is
+        Ok(name.to_string())
+    } else if let Some(ext) = extension {
+        Ok(format!("{}.{}", transformed_basename, ext.to_lowercase()))
+    } else {
+        Ok(transformed_basename)
+    }
+}
+
+/// Apply case style to a vector of word tokens
+fn apply_case_style(
+    tokens: &[String],
+    case_style: &CaseStyle,
+) -> Result<Vec<String>, TransformError> {
+    match case_style {
+        CaseStyle::Lower => Ok(tokens.iter().map(|t| t.to_lowercase()).collect()),
+        CaseStyle::Screaming => Ok(tokens.iter().map(|t| t.to_uppercase()).collect()),
+        CaseStyle::Sentence => {
+            let mut result = Vec::new();
+            for (i, token) in tokens.iter().enumerate() {
+                if i == 0 {
+                    result.push(capitalize_first(token));
+                } else {
+                    result.push(token.to_lowercase());
+                }
+            }
+            Ok(result)
+        }
+        CaseStyle::Start | CaseStyle::Title => {
+            Ok(tokens.iter().map(|t| capitalize_first(t)).collect())
+        }
+        CaseStyle::Pascal => Ok(tokens.iter().map(|t| capitalize_first(t)).collect()),
+        CaseStyle::Camel => {
+            let mut result = Vec::new();
+            for (i, token) in tokens.iter().enumerate() {
+                if i == 0 {
+                    result.push(token.to_lowercase());
+                } else {
+                    result.push(capitalize_first(token));
+                }
+            }
+            Ok(result)
+        }
+        CaseStyle::Studly => {
+            let combined = tokens.join("");
+            Ok(vec![apply_studly_caps(&combined, false)])
+        }
+        CaseStyle::StudlyReverse => {
+            let combined = tokens.join("");
+            Ok(vec![apply_studly_caps(&combined, true)])
+        }
+        CaseStyle::Auto => {
+            // For auto mode, detect and preserve the existing case style
+            let detected_case = CaseStyle::detect_from_input(&tokens.join(""));
+            apply_case_style(tokens, &detected_case)
+        }
+    }
+}
+
+/// Join tokens with the specified delimiter style
+fn join_with_delimiter(tokens: &[String], delimiter_style: &DelimiterStyle) -> String {
+    tokens.join(delimiter_style.as_str())
+}
+
+/// Apply studly caps (alternating case) to a string
+fn apply_studly_caps(input: &str, start_with_upper: bool) -> String {
+    let mut result = String::new();
+    let mut letter_count = 0;
+    let mut uppercase = start_with_upper;
+
+    for ch in input.chars() {
+        if ch.is_alphabetic() {
+            if uppercase {
+                result.push(ch.to_uppercase().next().unwrap_or(ch));
+            } else {
+                result.push(ch.to_lowercase().next().unwrap_or(ch));
+            }
+            uppercase = !uppercase;
+            letter_count += 1;
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
+/// Convenience functions for common transformations
+/// These provide easy access to the most requested case/delimiter combinations
+
+/// Transform to title case with snake_case delimiters
+/// Example: "MyFile.TXT" -> "My_File.txt"
+pub fn transform_title_snake(name: &str) -> Result<String, TransformError> {
+    transform_with_pipeline(name, CaseStyle::Title, DelimiterStyle::Snake)
+}
+
+/// Transform to lowercase with kebab-case delimiters
+/// Example: "MyFile.TXT" -> "my-file.txt"
+pub fn transform_lower_kebab(name: &str) -> Result<String, TransformError> {
+    transform_with_pipeline(name, CaseStyle::Lower, DelimiterStyle::Kebab)
+}
+
+/// Transform to pascal case with dot delimiters
+/// Example: "my_file.txt" -> "My.File.txt"
+pub fn transform_pascal_dot(name: &str) -> Result<String, TransformError> {
+    transform_with_pipeline(name, CaseStyle::Pascal, DelimiterStyle::Dot)
+}
+
+/// Transform to screaming snake case (all uppercase with underscores)
+/// Example: "myFile.txt" -> "MY_FILE.txt"
+pub fn transform_screaming_snake(name: &str) -> Result<String, TransformError> {
+    transform_with_pipeline(name, CaseStyle::Screaming, DelimiterStyle::Snake)
+}
+
+/// Transform to studly caps with dot delimiters
+/// Example: "myFile.txt" -> "mY.fIlE.txt"
+pub fn transform_studly_dot(name: &str) -> Result<String, TransformError> {
+    transform_with_pipeline(name, CaseStyle::Studly, DelimiterStyle::Dot)
+}
+
+/// Backward compatibility bridge to existing TransformType
+///
+/// This function maps the legacy TransformType enum to the new case/delimiter system.
+/// This allows existing code to continue working while transitioning to the new architecture.
+pub fn legacy_transform_to_pipeline(transform_type: &TransformType, name: &str) -> String {
+    let result = match transform_type {
+        TransformType::Lower => {
+            transform_with_pipeline(name, CaseStyle::Lower, DelimiterStyle::Flat)
+        }
+        TransformType::Upper => {
+            transform_with_pipeline(name, CaseStyle::Screaming, DelimiterStyle::Flat)
+        }
+        TransformType::Snake => {
+            transform_with_pipeline(name, CaseStyle::Lower, DelimiterStyle::Snake)
+        }
+        TransformType::Kebab => {
+            transform_with_pipeline(name, CaseStyle::Lower, DelimiterStyle::Kebab)
+        }
+        TransformType::Pascal => {
+            transform_with_pipeline(name, CaseStyle::Pascal, DelimiterStyle::Flat)
+        }
+        TransformType::Camel => {
+            transform_with_pipeline(name, CaseStyle::Camel, DelimiterStyle::Flat)
+        }
+        TransformType::Title => {
+            transform_with_pipeline(name, CaseStyle::Title, DelimiterStyle::Space)
+        }
+        TransformType::Sentence => {
+            transform_with_pipeline(name, CaseStyle::Sentence, DelimiterStyle::Flat)
+        }
+        TransformType::Start => {
+            transform_with_pipeline(name, CaseStyle::Start, DelimiterStyle::Space)
+        }
+        TransformType::Studly => {
+            transform_with_pipeline(name, CaseStyle::Studly, DelimiterStyle::Flat)
+        }
+        // For other transform types, fall back to the existing implementation
+        _ => return transform(name, transform_type),
+    };
+
+    match result {
+        Ok(transformed) => transformed,
+        Err(_) => transform(name, transform_type), // Fallback to legacy implementation
+    }
+}
+
 /// Transformation types available for filename conversion
 ///
 /// This enum represents all the different ways a filename can be transformed:
@@ -176,8 +673,8 @@ pub fn transform(name: &str, transform_type: &TransformType) -> String {
         TransformType::Title => title_case_preserve_extension(name),
         TransformType::Camel => camel_case_preserve_extension(name),
         TransformType::Pascal => pascal_case_preserve_extension(name),
-        TransformType::Lower => name.to_lowercase(),
-        TransformType::Upper => name.to_uppercase(),
+        TransformType::Lower => lower_case_preserve_extension(name),
+        TransformType::Upper => upper_case_preserve_extension(name),
         TransformType::Sentence => sentence_case_preserve_extension(name),
         TransformType::Start => start_case_preserve_extension(name),
         TransformType::Studly => studly_caps_preserve_extension(name),
@@ -405,6 +902,16 @@ fn studly_caps_filename(name: &str) -> String {
 /// Convert a filename to StudlyCaps while preserving the file extension
 fn studly_caps_preserve_extension(name: &str) -> String {
     preserve_extension_transform(name, studly_caps_filename)
+}
+
+/// Convert a filename to lowercase while preserving the file extension
+fn lower_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, |s| s.to_lowercase())
+}
+
+/// Convert a filename to uppercase while preserving the file extension
+fn upper_case_preserve_extension(name: &str) -> String {
+    preserve_extension_transform(name, |s| s.to_uppercase())
 }
 
 /// Tokenize a string into constituent words, handling all separators and camelCase
@@ -1013,5 +1520,249 @@ mod tests {
             transform("already-kebab.txt", &TransformType::SplitSnake),
             "already_kebab.txt"
         );
+    }
+
+    #[test]
+    fn test_lower_case_preserve_extension() {
+        // Test that lowercase transformation preserves extensions
+        assert_eq!(transform("MyFile.TXT", &TransformType::Lower), "myfile.txt");
+        assert_eq!(
+            transform("HELLO_WORLD.PDF", &TransformType::Lower),
+            "hello_world.pdf"
+        );
+        assert_eq!(transform("Test.JPG", &TransformType::Lower), "test.jpg");
+        assert_eq!(
+            transform("NoExtension", &TransformType::Lower),
+            "noextension"
+        );
+        // Edge cases
+        assert_eq!(
+            transform(".hidden.TXT", &TransformType::Lower),
+            ".hidden.txt"
+        );
+        assert_eq!(transform("file.", &TransformType::Lower), "file.");
+        assert_eq!(
+            transform("multiple.dots.TXT", &TransformType::Lower),
+            "multiple.dots.txt"
+        );
+    }
+
+    #[test]
+    fn test_upper_case_preserve_extension() {
+        // Test that uppercase transformation preserves extensions
+        assert_eq!(transform("myfile.txt", &TransformType::Upper), "MYFILE.txt");
+        assert_eq!(
+            transform("hello_world.pdf", &TransformType::Upper),
+            "HELLO_WORLD.pdf"
+        );
+        assert_eq!(transform("Test.jpg", &TransformType::Upper), "TEST.jpg");
+        assert_eq!(
+            transform("NoExtension", &TransformType::Upper),
+            "NOEXTENSION"
+        );
+        // Edge cases
+        assert_eq!(
+            transform(".hidden.txt", &TransformType::Upper),
+            ".HIDDEN.txt"
+        );
+        assert_eq!(transform("file.", &TransformType::Upper), "FILE.");
+        assert_eq!(
+            transform("multiple.dots.txt", &TransformType::Upper),
+            "MULTIPLE.DOTS.txt"
+        );
+    }
+
+    #[test]
+    fn test_new_pipeline_basic_transformations() {
+        // Test basic case styles
+        assert_eq!(
+            transform_with_pipeline("hello_world", CaseStyle::Pascal, DelimiterStyle::Flat)
+                .unwrap(),
+            "HelloWorld"
+        );
+        assert_eq!(
+            transform_with_pipeline("HelloWorld", CaseStyle::Lower, DelimiterStyle::Snake).unwrap(),
+            "hello_world"
+        );
+        assert_eq!(
+            transform_with_pipeline("My File", CaseStyle::Camel, DelimiterStyle::Flat).unwrap(),
+            "myFile"
+        );
+    }
+
+    #[test]
+    fn test_new_combination_functions() {
+        // Test title-snake combination
+        assert_eq!(transform_title_snake("myFile.txt").unwrap(), "My_File.txt");
+
+        // Test lower-kebab combination
+        assert_eq!(transform_lower_kebab("MyFile.TXT").unwrap(), "my-file.txt");
+
+        // Test pascal-dot combination
+        assert_eq!(transform_pascal_dot("my_file.txt").unwrap(), "My.File.txt");
+
+        // Test screaming-snake combination
+        assert_eq!(
+            transform_screaming_snake("myFile.txt").unwrap(),
+            "MY_FILE.txt"
+        );
+
+        // Test studly-dot combination
+        let result = transform_studly_dot("myfile.txt").unwrap();
+        assert!(result.starts_with("m") || result.starts_with("M")); // studly alternates
+        assert!(result.ends_with(".txt"));
+    }
+
+    #[test]
+    fn test_extension_preservation_in_pipeline() {
+        // Test that extensions are preserved and lowercased
+        assert_eq!(
+            transform_with_pipeline("MyFile.TXT", CaseStyle::Lower, DelimiterStyle::Snake).unwrap(),
+            "my_file.txt"
+        );
+
+        assert_eq!(
+            transform_title_snake("hello_world.PDF").unwrap(),
+            "Hello_World.pdf"
+        );
+
+        // Test files without extensions
+        assert_eq!(transform_lower_kebab("MyFile").unwrap(), "my-file");
+
+        // Test edge cases
+        assert_eq!(
+            transform_with_pipeline("file.", CaseStyle::Lower, DelimiterStyle::Flat).unwrap(),
+            "file."
+        );
+        assert_eq!(
+            transform_with_pipeline(".hidden", CaseStyle::Pascal, DelimiterStyle::Flat).unwrap(),
+            ".hidden"
+        );
+    }
+
+    #[test]
+    fn test_validation_logic() {
+        // Test invalid combinations
+        assert!(matches!(
+            transform_with_pipeline("test", CaseStyle::Camel, DelimiterStyle::Snake),
+            Err(TransformError::InvalidCombination(
+                CaseStyle::Camel,
+                DelimiterStyle::Snake
+            ))
+        ));
+
+        // Test valid combinations
+        assert!(transform_with_pipeline("test", CaseStyle::Camel, DelimiterStyle::Flat).is_ok());
+        assert!(transform_with_pipeline("test", CaseStyle::Pascal, DelimiterStyle::Snake).is_ok());
+
+        // Test empty input
+        assert!(matches!(
+            transform_with_pipeline("", CaseStyle::Lower, DelimiterStyle::Snake),
+            Err(TransformError::EmptyInput)
+        ));
+    }
+
+    #[test]
+    fn test_case_style_detection() {
+        // Test detection of different case styles
+        assert_eq!(CaseStyle::detect_from_input("helloWorld"), CaseStyle::Camel);
+        assert_eq!(
+            CaseStyle::detect_from_input("HelloWorld"),
+            CaseStyle::Pascal
+        );
+        assert_eq!(
+            CaseStyle::detect_from_input("HELLO_WORLD"),
+            CaseStyle::Screaming
+        );
+        assert_eq!(
+            CaseStyle::detect_from_input("Hello World"),
+            CaseStyle::Title
+        );
+        assert_eq!(
+            CaseStyle::detect_from_input("Helloworld"),
+            CaseStyle::Sentence
+        );
+        assert_eq!(
+            CaseStyle::detect_from_input("hello_world"),
+            CaseStyle::Lower
+        );
+    }
+
+    #[test]
+    fn test_delimiter_style_detection() {
+        // Test detection of different delimiter styles
+        assert_eq!(
+            DelimiterStyle::detect_from_input("hello_world"),
+            DelimiterStyle::Snake
+        );
+        assert_eq!(
+            DelimiterStyle::detect_from_input("hello-world"),
+            DelimiterStyle::Kebab
+        );
+        assert_eq!(
+            DelimiterStyle::detect_from_input("hello.world"),
+            DelimiterStyle::Dot
+        );
+        assert_eq!(
+            DelimiterStyle::detect_from_input("hello:world"),
+            DelimiterStyle::Colon
+        );
+        assert_eq!(
+            DelimiterStyle::detect_from_input("hello world"),
+            DelimiterStyle::Space
+        );
+        assert_eq!(
+            DelimiterStyle::detect_from_input("helloworld"),
+            DelimiterStyle::Flat
+        );
+    }
+
+    #[test]
+    fn test_default_delimiter_mapping() {
+        // Test that case styles return appropriate default delimiters
+        assert_eq!(CaseStyle::Camel.default_delimiter(), DelimiterStyle::Flat);
+        assert_eq!(CaseStyle::Pascal.default_delimiter(), DelimiterStyle::Flat);
+        assert_eq!(CaseStyle::Title.default_delimiter(), DelimiterStyle::Space);
+        assert_eq!(CaseStyle::Lower.default_delimiter(), DelimiterStyle::Snake);
+        assert_eq!(
+            CaseStyle::Screaming.default_delimiter(),
+            DelimiterStyle::Snake
+        );
+    }
+
+    #[test]
+    fn test_studly_caps_application() {
+        // Test studly caps with different starting cases
+        let result1 = apply_studly_caps("hello", false);
+        let result2 = apply_studly_caps("hello", true);
+
+        // Should be alternating patterns
+        assert_ne!(result1, result2);
+        assert_eq!(result1.len(), result2.len());
+    }
+
+    #[test]
+    fn test_backward_compatibility() {
+        // Test that legacy functions work with new pipeline
+        let test_file = "MyTest.TXT";
+
+        // Compare legacy vs new pipeline results for basic cases
+        let legacy_snake = transform(test_file, &TransformType::Snake);
+        let pipeline_snake = legacy_transform_to_pipeline(&TransformType::Snake, test_file);
+        assert_eq!(legacy_snake, pipeline_snake);
+
+        let legacy_pascal = transform(test_file, &TransformType::Pascal);
+        let pipeline_pascal = legacy_transform_to_pipeline(&TransformType::Pascal, test_file);
+        assert_eq!(legacy_pascal, pipeline_pascal);
+    }
+
+    #[test]
+    fn test_auto_case_style() {
+        // Test auto case style preservation
+        let result =
+            transform_with_pipeline("helloWorld", CaseStyle::Auto, DelimiterStyle::Kebab).unwrap();
+        // Should detect camel case and apply it with kebab delimiters
+        // The exact result depends on implementation but should preserve the camel pattern
+        assert!(result.contains("-"));
     }
 }

@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326242
+title: CNP-Keyword Routing
+id: ca9c11ee-04d5-489f-8ea8-5b0ca733271d
+hash: b0f713d8532738027c799c1d645b203e7dce00d02e9e837fd5a418ebc8e66923
+---
 # CNP Keyword Delegation and Collision Specification
 
 ## Purpose

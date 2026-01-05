@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326244
+title: ROADMAP
+id: 8aa07d7e-87cc-40d8-be73-f49fb0cf2425
+hash: 2320d98c5ca170b97185855374bef384f60d0b8a50aca94e7afc815e021e86d5
+---
 # SMV Roadmap
 
 ## Next Development Sessions (HIGH PRIORITY)
@@ -56,7 +64,7 @@
 - **Case Transformations**: snake, kebab, pascal, camel, title, lower, upper ✓
 - **Split Functionality**: `split TRANSFORMATION` for camelCase/PascalCase boundary detection ✓
 - **Custom Split Definitions**: User-defined word boundaries in config file for edge cases
-- **String Operations**: CHANGE "old" INTO "new" with regex support ✓
+- **String Operations**: CHANGE: "old" INTO "new" with regex support ✓
 - **Batch Operations**: Multiple transformations in sequence ✓
 - **Undo Support**: Reverse operations with history ✓
 

@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326181
+title: tui_queue_feature
+id: dc582e28-ce91-440f-815b-de5b789a78fd
+hash: 86360792ec911e832af0b8c55a6da7d01bcffb85616c937be96db11218050e8f
+---
 # SMV TUI Queue-Based Action System Design Document
 
 **Version**: 1.0  

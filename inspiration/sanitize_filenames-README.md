@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326178
+title: sanitize_filenames-README
+id: 622d0ce8-1e6a-4c59-a535-b05bff3fd739
+hash: 5d4411bbb393c0f22a929cf9079c1ed2a3c020fe779d668ded7d4a891d367872
+---
 # File and Directory Renaming Script
 
 ## Overview

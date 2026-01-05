@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326319
+title: quick-start
+id: 0304b50d-cfed-4346-9a3f-c95851cfb5f5
+hash: 795ab893dc401f0f53767fe12fe663d13508c2026b8bde3e2fb7366115e3d34d
+---
 # Quick Start
 
 Get up and running with SMV in 5 minutes.
@@ -38,7 +46,7 @@ smv rm . EXT:log -F
 ### Find and replace in filenames
 ```bash
 # Replace "old" with "new" in all filenames
-smv CHANGE "old" INTO "new" . -p
+smv CHANGE: "old" INTO "new" . -p
 ```
 
 ## Key Concepts

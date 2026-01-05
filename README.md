@@ -20,7 +20,7 @@ A powerful, Rust-based CNP (Canopy) ecosystem tool that replaces the standard Un
   - **Split camelCase/PascalCase** then apply any transformation (`featureWishList.md` → `feature_wish_list.md`)
 
 ### CNP Ecosystem Integration
-- **Filter Keywords**: `NAME:`, `TYPE:`, `EXT:`, `SIZE>`, `DEPTH<`, `MODIFIED>`, `ACCESSED<`
+- **Filter Keywords**: `NAME:`, `TYPE:`, `EXT:`, `SIZE:`, `DEPTH:`, `MODIFIED:`, `ACCESSED:`
 - **Semantic Groups**: `FOR:notes`, `FOR:media`, `FOR:scripts`, `FOR:projects`, `FOR:configs`
 - **Tool Delegation**: `TO:say`, `TO:dff`, `TO:xfd`, `TO:dsc` for specialized operations
 - **Output Routing**: `INTO:file.txt`, `FORMAT:json/csv/yaml` for structured output
@@ -31,7 +31,7 @@ A powerful, Rust-based CNP (Canopy) ecosystem tool that replaces the standard Un
   - Group files by basename into directories
   - Flatten directory structures by moving all files to the root
   - Clean up empty directories after flattening
-- **Preview Mode** - See changes before they're applied
+- **Preview Mode** - See changes before they're applied, with detailed source → destination mapping and deduplication annotations
 - **Batch Processing** - Apply transformations to multiple files at once
 - **Undo Functionality** - Safely revert changes
 - **Safety Features** - File backups and conflict detection
@@ -66,7 +66,7 @@ SMV supports the full CNP (Canopy) grammar for advanced file operations with fil
 # Transform with extension filter
 smv snake . EXT:md -p                    # Convert markdown files to snake_case
 
-# Filter by file type  
+# Filter by file type
 smv kebab . TYPE:file EXT:txt -r         # Only process .txt files, recursively
 
 # Use semantic groups
@@ -76,12 +76,12 @@ smv clean . FOR:media                    # Clean up media filenames
 # Size-based filtering
 smv pascal . SIZE>1MB TYPE:file -p       # Large files only
 
-# Date-based filtering  
+# Date-based filtering
 smv lower . MODIFIED>2024-01-01 -r       # Files modified after Jan 1, 2024
 
 # Prefix removal
-smv CHANGE "IMG_" INTO "" . EXT:jpg -p    # Remove "IMG_" prefix from all JPG files
-smv CHANGE "DSC" INTO "" . EXT:png        # Remove "DSC" prefix from PNG files
+smv CHANGE: "IMG_" INTO "" . EXT:jpg -p    # Remove "IMG_" prefix from all JPG files
+smv CHANGE: "DSC" INTO "" . EXT:png        # Remove "DSC" prefix from PNG files
 
 # Split camelCase/PascalCase then transform
 smv split snake . EXT:md -p              # Split camelCase files then convert to snake_case
@@ -103,11 +103,26 @@ smv kebab . TYPE:file EXT:md SIZE<1MB NAME:draft -p
 ```
 
 #### CNP Semantic Groups
-- `FOR:notes` - Markdown, text, and documentation files  
-- `FOR:media` - Images, videos, and audio files
-- `FOR:scripts` - Shell, Python, Rust, and other script files
-- `FOR:projects` - Source directories and project folders
-- `FOR:configs` - Configuration files (yaml, json, toml, etc.)
+
+Semantic groups provide an intelligent way to categorize files by their purpose rather than just file extensions:
+
+- `FOR:notes` - Documentation and note files (`.md`, `.txt`, `.org`, `.rst`, `.adoc`)
+- `FOR:media` - Images, videos, and audio files (`.jpg`, `.png`, `.mp4`, `.wav`, `.gif`, etc.)
+- `FOR:scripts` - Executable and source code files (`.sh`, `.py`, `.rs`, `.js`, `.go`, etc.)
+- `FOR:projects` - Project directories and build files (`Cargo.toml`, `package.json`, `.git/`, etc.)
+- `FOR:configs` - Configuration files (`.yaml`, `.json`, `.toml`, `.ini`, `.conf`, etc.)
+
+These groups make it easy to operate on files by their semantic meaning:
+```bash
+# Clean up all documentation files in a project
+smv clean . FOR:notes -r
+
+# Convert all script filenames to snake_case
+smv snake . FOR:scripts -p
+
+# Organize all media files
+smv title . FOR:media
+```
 
 ### Basic Usage (POSIX-compatible mv/cp)
 
@@ -120,6 +135,17 @@ smv mv file.txt /path/to/destination/
 
 # Move multiple files to a directory
 smv mv file1.txt file2.txt destination_directory/
+
+# Multi-source move with CNP grammar (regex or glob, deduplication, preview)
+smv -move EXT:png FROM:a/,b/ TO:c/ -p
+smv -move NAME:'^img\d+' FROM:a/,b/ TO:c/ -r -p
+smv -move EXT:png FROM:a/*.png,b/*.png TO:c/ -gr -p
+
+# Preview output shows:
+# a/img1.png   →  c/img1.png   [NEW]
+# b/img2.png   →  c/img2.png   [NEW]
+# b/img3.png   →  c/img3.png   [OVERWRITE]
+# [DEDUP] b/img1.png matched multiple patterns, processed once
 
 # Rename a file
 smv mv old_name.txt new_name.txt
@@ -159,20 +185,18 @@ smv cp -P symlink dest             # Preserve symlinks
 - `--preserve` - Preserve file attributes, ownership, and timestamps
 - `--interactive-confirm` - Prompt before overwriting files
 
-```
-
 ### New Command Structure
 
-SMV follows the LAR project command philosophy: `<tool> [scope] [targets] [modifiers]`
+SMV follows the CNP command philosophy: `<tool> [scope] [targets] [modifiers]`
 
 #### Interactive Guidance System
 
 SMV features an Excel-like command guidance system that shows available options as you type:
 
 ```bash
-$ smv -snake . pdf
-[smv] [-snake] [. pdf] [preview|recursive|force]
- cmd   scope    targets    modifiers (optional)
+$ smv snake EXT:pdf
+[smv] [snake] [EXT:pdf] [-p|-r|-f]
+ cmd   transform  filters    flags (optional)
 ```
 
 - **F1**: Get context-sensitive help for current position
@@ -220,16 +244,16 @@ smv -sort downloads/ type group
 
 ### Interactive Modes
 
-#### AFN REPL Integration
+#### CNP REPL Integration
 
-SMV is designed to work within the AFN REPL environment:
+SMV is designed to work within the CNP REPL environment:
 
 ```bash
-# Start AFN REPL
-$ afn
-AFN> smv -snake . pdf preview
-AFN> smv -pascal documents/ txt
-AFN> exit
+# Start CNP REPL
+$ cnp
+CNP> smv snake EXT:pdf -p
+CNP> smv pascal documents/ EXT:txt
+CNP> exit
 $
 ```
 
@@ -260,7 +284,6 @@ The TUI mode features:
 - GParted-style operation queue
 - Preview of file transformations
 
-<!--Dev Note: We need to explain how the backup mode works in more detail. We can have a separate file that goes all the way through it, or put enough detail in the README most folks will understand. We do need a documentation site somewhere. Maybe a wiki on GitHub or using Sphinx and REst. -->
 
 In the interactive shell:
 
@@ -306,16 +329,16 @@ Commands:
 smv <COMMAND> <PATH> [FILTERS] [ROUTES] [FLAGS]
 ```
 
-**Commands**: `snake`, `kebab`, `pascal`, `camel`, `title`, `lower`, `upper`, `clean`, `split TRANSFORMATION`, `CHANGE "old" INTO "new"`, `CHANGE "prefix" INTO ""` (prefix removal), `REGEX "pattern" INTO "replacement"`
+**Commands**: `snake`, `kebab`, `pascal`, `camel`, `title`, `lower`, `upper`, `clean`, `split TRANSFORMATION`, `CHANGE: "old" INTO "new"`, `CHANGE: "prefix" INTO ""` (prefix removal), `REGEX "pattern" INTO "replacement"`
 
 **Filters**:
-- `NAME:value` - Match filenames containing value  
-- `TYPE:file|folder|symlink` - Filter by file type
+- `NAME:value` - Match filenames containing value
+- `TYPE:directory` - Filter to directories only (files are default)
 - `EXT:extension` - Filter by file extension
-- `SIZE>1MB` / `SIZE<500KB` - Filter by file size
-- `DEPTH>2` / `DEPTH<1` - Filter by directory depth  
-- `MODIFIED>2024-01-01` / `MODIFIED<2023-12-31` - Filter by modification date
-- `ACCESSED>2024-01-01` / `ACCESSED<2023-12-31` - Filter by access date
+- `SIZE:1MB` / `SIZE:500KB` - Filter by file size
+- `DEPTH:2` / `DEPTH:1` - Filter by directory depth
+- `MODIFIED:2024-01-01` / `MODIFIED:2023-12-31` - Filter by modification date
+- `ACCESSED:2024-01-01` / `ACCESSED:2023-12-31` - Filter by access date
 - `FOR:notes|media|scripts|projects|configs` - Semantic file groups
 
 **Routes**:
@@ -343,7 +366,7 @@ Options:
 
 ### Transform Commands
 - `snake` - Convert to snake_case
-- `kebab` - Convert to kebab-case  
+- `kebab` - Convert to kebab-case
 - `pascal` - Convert to PascalCase
 - `camel` - Convert to camelCase
 - `title` - Convert to Title Case
@@ -367,7 +390,7 @@ Options:
 | `split snake` | Split camelCase/PascalCase then convert to snake_case | `featureWishList.md` → `feature_wish_list.md` |
 | `split kebab` | Split camelCase/PascalCase then convert to kebab-case | `UserSettings.json` → `user-settings.json` |
 | `split title` | Split camelCase/PascalCase then convert to Title Case | `apiEndpoint.ts` → `ApiEndpoint.ts` |
-| `CHANGE "prefix" INTO ""` | Remove prefix from filename | `IMG_1234.jpg` → `1234.jpg` |
+| `CHANGE: "prefix" INTO ""` | Remove prefix from filename | `IMG_1234.jpg` → `1234.jpg` |
 
 ## Safety Features
 
@@ -377,7 +400,7 @@ SMV automatically creates backups of modified files in `~/.config/smv/backups/`.
 
 ### Undo Functionality
 
-The undo command reverts the most recent operation. 
+The undo command reverts the most recent operation.
 
 In interactive mode, you can use:
 ```
@@ -410,15 +433,15 @@ See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and 
 ### Completed Features ✓
 
 - **CNP Grammar Support**: Full Canopy ecosystem integration with filters, routes, and tool delegation
-- **Advanced Filtering**: NAME:, TYPE:, EXT:, SIZE>, DEPTH<, MODIFIED>, ACCESSED< filters
+- **Advanced Filtering**: NAME:, TYPE:, EXT:, SIZE:, DEPTH:, MODIFIED:, ACCESSED: filters
 - **Semantic Groups**: FOR:notes, FOR:media, FOR:scripts, FOR:projects, FOR:configs
 - **Tool Delegation**: TO:tool routing for specialized operations
 - **Output Routing**: INTO:file and FORMAT:json/csv/yaml support
 - **DSC Integration**: Ultra-fast file discovery using DSC instead of broken glob patterns
-- **New Command Structure**: Implemented LAR project command philosophy
+- **New Command Structure**: Implemented CNP command philosophy
 - **Interactive Guidance System**: Excel-like command preview and help (designed)
 - **Sequential Command Parsing**: Position-based argument validation
-- **AFN REPL Integration**: Designed for use within AFN environment
+- **CNP REPL Integration**: Designed for use within CNP environment
 - **Simplified Syntax**: No more `--` clutter after scope declaration
 
 ### High Priority Tasks
@@ -426,7 +449,7 @@ See [DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the current roadmap and 
 - [ ] **Interactive Guidance Implementation**: Build the Excel-like command preview system
 - [ ] **F1 Help System**: Context-sensitive help for each command position
 - [ ] **Tab Completion**: Cycle through valid options at each position
-- [ ] **AFN Library Integration**: Extract shared command guidance into AFN library
+- [ ] **CNP Library Integration**: Extract shared command guidance into CNP library
 - [ ] **Complete Tool Delegation**: Finalize integration with SAY, DFF, XFD tools
 - [ ] **WHERE Filter Groups**: Implement logical grouping of multiple filters
 

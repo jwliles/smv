@@ -1,11 +1,3 @@
----
-date_created: 2025-10-02T03-23-46
-date_updated: 2025-10-02T03-23-46
-timestamp: 1759375426393
-title: CHANGELOG
-id: 1646f44f-50b9-4cbd-bae6-4b3e86a57425
-hash: 736e599f10ff5d7525f50ffc04625d2efcd2198c3ed3b2eb03f99753eab5c69c
----
 # Changelog
 
 All notable changes to this project will be documented in this file.

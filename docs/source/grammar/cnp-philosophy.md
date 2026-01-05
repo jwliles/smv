@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326271
+title: cnp-philosophy
+id: a6cc1b2a-e8a7-4f2e-affc-177245b5c32c
+hash: a24ab53393015c3bb9bca62f6c9ee107540bf73f53d5e4edbfc5619ad4f201d0
+---
 # CNP Project Command Philosophy
 
 The `cnp` toolset is built around a core principle of **clarity through consistency**. Each tool follows a common command-line structure that helps users easily remember, predict, and script interactions across the suite.

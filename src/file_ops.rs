@@ -32,11 +32,29 @@ pub fn move_files(
     sources: &[PathBuf],
     destination: &Path,
     config: &FileOpConfig,
+    preview: bool,
 ) -> Result<FileOpStats, Box<dyn Error>> {
+    use std::collections::HashSet;
     let mut stats = FileOpStats::default();
     let dest_is_dir = destination.is_dir();
 
-    for source in sources {
+    // Deduplicate sources by absolute path
+    let mut seen = HashSet::new();
+    let mut deduped_sources = Vec::new();
+    for src in sources {
+        let abs = fs::canonicalize(src).unwrap_or_else(|_| src.clone());
+        if seen.insert(abs.clone()) {
+            deduped_sources.push(src.clone());
+        } else if preview {
+            println!(
+                "{} {} [DEDUP]",
+                src.display(),
+                "matched multiple patterns, processed once".yellow()
+            );
+        }
+    }
+
+    for source in &deduped_sources {
         stats.processed += 1;
 
         let dest_path = if dest_is_dir {
@@ -45,16 +63,48 @@ pub fn move_files(
             destination.to_path_buf()
         };
 
-        if let Err(e) = move_single_item(source, &dest_path, config) {
-            eprintln!(
-                "{}: Failed to move {}: {}",
-                "Error".red(),
-                source.display(),
-                e
-            );
-            stats.errors += 1;
+        let annotation = if !source.exists() {
+            "[SKIP]".yellow()
+        } else if dest_path.exists() {
+            if config.no_clobber {
+                "[SKIP]".yellow()
+            } else if config.force {
+                "[OVERWRITE]".red()
+            } else {
+                "[OVERWRITE]".yellow()
+            }
         } else {
-            stats.moved += 1;
+            "[NEW]".green()
+        };
+
+        if preview {
+            println!(
+                "{}  →  {}  {}",
+                source.display(),
+                dest_path.display(),
+                annotation
+            );
+            if !source.exists() || (dest_path.exists() && config.no_clobber) {
+                stats.skipped += 1;
+                continue;
+            }
+            if dest_path.exists() {
+                stats.moved += 1;
+            } else {
+                stats.moved += 1;
+            }
+        } else {
+            if let Err(e) = move_single_item(source, &dest_path, config) {
+                eprintln!(
+                    "{}: Failed to move {}: {}",
+                    "Error".red(),
+                    source.display(),
+                    e
+                );
+                stats.errors += 1;
+            } else {
+                stats.moved += 1;
+            }
         }
     }
 

@@ -39,7 +39,7 @@ COMMANDS:
   snake, kebab, pascal, camel, title, sentence, start, studly, lower, upper    Transform filename case/format
   split TRANSFORMATION [target]                      Split camelCase/PascalCase then transform
   transformation file.txt                             Transform specific file
-  CHANGE \"old\" INTO \"new\" [target]                  Replace substring in filenames
+  CHANGE: \"old\" INTO \"new\" [target]                 Replace substring in filenames
   mv source destination                               Move files/directories  
   cp source destination                               Copy files/directories
   rm targets...                                       Remove files/directories
@@ -79,7 +79,7 @@ EXAMPLES:
   smv split snake .                    # Split camelCase/PascalCase then apply snake_case
   smv split kebab featureList.md -p    # Preview: featureList.md → feature-list.md
   smv snake . -e                       # Transform files AND directories
-  smv CHANGE \"IMG_\" INTO \"\" . -rp      # Preview remove IMG_ prefix recursively
+  smv CHANGE: \"IMG_\" INTO \"\" . -rp     # Preview remove IMG_ prefix recursively
   smv mv file.txt newname.txt          # Rename file
   smv rm . EXT:log -p                  # Preview delete all .log files
   smv -cd newdir                       # Create directory
@@ -424,11 +424,28 @@ fn parse_xfd_command(args: &Args) -> Result<XfdCommand, Box<dyn Error>> {
 
     // Parse command structure
     match args.command.as_deref() {
-        Some("CHANGE") => {
+        Some("CHANGE:" | "CHANGE") => {
+            // Show deprecation warning for old format
+            if args.command.as_deref() == Some("CHANGE") {
+                eprintln!(
+                    "{}[CNP] ⚠️  Deprecated syntax: CHANGE without colon",
+                    "WARNING: ".yellow()
+                );
+                eprintln!(
+                    "{}[CNP] ✅  Use canonical format: CHANGE: \"old\" INTO \"new\"",
+                    "PREFERRED: ".green()
+                );
+                eprintln!(
+                    "{}[CNP] 📖  See CNP grammar specification for details",
+                    "INFO: ".blue()
+                );
+                eprintln!();
+            }
+
             let old = args
                 .arg1
                 .as_ref()
-                .ok_or("Missing old string for CHANGE command")?;
+                .ok_or("Missing old string for CHANGE: command")?;
             if args.into_keyword.as_deref() != Some("INTO") {
                 return Err("Expected 'INTO' keyword after old string".into());
             }
@@ -552,7 +569,7 @@ fn parse_xfd_command(args: &Args) -> Result<XfdCommand, Box<dyn Error>> {
                 });
             }
 
-            Err("No command specified. Use: CHANGE \"old\" INTO \"new\", transform commands, or basic file operations".into())
+            Err("No command specified. Use: CHANGE: \"old\" INTO \"new\", transform commands, or basic file operations".into())
         }
     }
 }
@@ -846,7 +863,7 @@ fn run_move_command(
     let dest_path = Path::new(destination);
 
     // Execute move operation
-    let stats = move_files(&expanded_sources, dest_path, &config)?;
+    let stats = move_files(&expanded_sources, dest_path, &config, args.preview)?;
 
     // Print results
     println!("\n{}:", "Results".bold());

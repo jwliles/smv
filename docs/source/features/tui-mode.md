@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326270
+title: tui-mode
+id: a1277346-dc3c-42a2-a4e6-f6c52c09acba
+hash: e3cec54fefc2e3485d760f142f183e79e0fd81c014a3f9390af5228eccd02444
+---
 # TUI Mode (Planned)
 
 Visual file explorer with keyboard-driven operations.

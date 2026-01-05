@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326140
+title: MANUAL
+id: 3e4e2adf-563f-42f9-9c00-45dff057a47f
+hash: fb9869e60a5b48806782a89eb686f0f5c612bbe55c2447e5b9ead97c7c05b909
+---
 # SMV Manual
 
 ## NAME
@@ -121,10 +129,10 @@ smv snake . EXT:md FORMAT:csv
 ### String Replacement
 ```bash
 # Replace substring in filenames
-smv CHANGE "old" INTO "new" . -p
+smv CHANGE: "old" INTO "new" . -p
 
 # Remove prefix from filenames
-smv CHANGE "IMG_" INTO "" . EXT:jpg -p
+smv CHANGE: "IMG_" INTO "" . EXT:jpg -p
 
 # Use regex for complex patterns
 smv REGEX "\\d+" INTO "XXX" . -r
@@ -199,7 +207,7 @@ Features:
 | pascal | Convert to PascalCase | `my_file.txt` → `MyFile.txt` |
 | lower | Convert to lowercase | `MyFile.txt` → `myfile.txt` |
 | upper | Convert to UPPERCASE | `myFile.txt` → `MYFILE.TXT` |
-| CHANGE "prefix" INTO "" | Remove prefix from filename | `IMG_1234.jpg` → `1234.jpg` |
+| CHANGE: "prefix" INTO "" | Remove prefix from filename | `IMG_1234.jpg` → `1234.jpg` |
 
 ## SIZE UNITS
 

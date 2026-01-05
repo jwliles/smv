@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326270
+title: repl-mode
+id: 9004da3a-32c0-4d9e-b16f-91007b79b2da
+hash: 19099c32d17020682e3643b50b6bdb2ef510797d9798b93f3a698334d4688e28
+---
 # REPL Mode (Planned)
 
 Interactive command environment that solves the CNP verbosity problem.
@@ -36,7 +44,7 @@ All SMV commands available without prefix:
 smv> mv source.txt dest.txt
 smv> snake . EXT:txt -p
 smv> rm . EXT:log -F
-smv> CHANGE "old" INTO "new" . -p
+smv> CHANGE: "old" INTO "new" . -p
 ```
 
 ### Enhanced Features
@@ -73,7 +81,7 @@ smv> rm . EXT:tmp -F
 smv> cd ./src
 smv> snake . EXT:rs -p
 smv> kebab . EXT:md -p
-smv> CHANGE "old_api" INTO "new_api" . EXT:rs -p
+smv> CHANGE: "old_api" INTO "new_api" . EXT:rs -p
 ```
 
 ### Interactive Exploration

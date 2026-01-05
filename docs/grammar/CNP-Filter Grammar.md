@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326243
+title: CNP-Filter Grammar
+id: 185e282a-f0bb-4e8c-98ea-19345265795a
+hash: d38b44027c0e1fdefb4b936fdb35cae7e2097ac0b6dbdb1a9c92f43ecf24a0ba
+---
 # DSC CLI Grammar Specification
 
 This document defines the **DSC command-line interface grammar**, a universal syntax model originally developed for the `dsc` tool but suitable for use across any file-oriented, declarative CLI application.

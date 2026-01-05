@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326269
+title: overview
+id: 8d8eedbb-f090-4adf-8a26-81899e0e06f6
+hash: 3ee59898f910071c6e67df29937eb31c90d79588380372b07ba5dee53be960de
+---
 # Features Overview
 
 SMV provides powerful file management capabilities through intelligent transformations, CNP filtering, and safe operation modes.
@@ -18,13 +26,13 @@ SMV provides powerful file management capabilities through intelligent transform
 - **Complex combinations**: Multiple filters with AND logic
 
 ### Safety and Preview
-- **Preview mode**: `-p` flag shows what would happen without applying changes
+- **Preview mode**: `-p` flag shows what would happen without applying changes, including source → destination mapping and deduplication
 - **Force mode**: `-F` flag for confirmed operations
 - **Recursive operations**: `-r` flag for subdirectory processing
 - **No-clobber protection**: `-n` flag prevents overwriting existing files
 
 ### File Operations
-- **Enhanced move/copy**: Standard operations with SMV's filtering power
+- **Enhanced move/copy**: Standard operations with SMV's filtering power, including multi-source moves with deduplication and preview mapping
 - **Intelligent deletion**: Remove files by pattern, size, or type
 - **File creation**: Create files and directories with `-cf` and `-cd`
 - **Batch operations**: Process multiple files efficiently

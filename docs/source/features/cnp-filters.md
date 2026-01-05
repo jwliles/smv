@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326270
+title: cnp-filters
+id: 2e8952f9-3cdb-4eb8-ae58-fc4e2585417b
+hash: 35f175cef38c881e64dbc4f37eb9eebe85ada1f8664fa31a8c676ee622721e8e
+---
 # CNP Filters
 
 CNP filters provide powerful, declarative file selection using a simple UPPERCASE syntax.
@@ -97,7 +105,7 @@ smv camel . NAME:*test* EXT:js -p
 smv rm . NAME:*backup* -p
 
 # Transform files starting with "old_"
-smv CHANGE "old_" INTO "new_" . NAME:old_* -p
+smv CHANGE: "old_" INTO "new_" . NAME:old_* -p
 ```
 
 ### Date Filters (Planned)

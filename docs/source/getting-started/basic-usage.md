@@ -1,3 +1,11 @@
+---
+date_created: 2025-10-02T11-25-26
+date_updated: 2025-08-30T02-49-20
+timestamp: 1759404326319
+title: basic-usage
+id: bd3d3cc9-0821-4a3e-b2eb-6721052d66e3
+hash: dbdbd96ad84fb74b5be10cb32540cca2684731f29d2c4b7d629766b3bd10272c
+---
 # Basic Usage
 
 Learn the fundamentals of SMV through practical examples.
@@ -32,13 +40,13 @@ smv upper .          # UPPERCASE
 
 ```bash
 # Replace substring in filenames
-smv CHANGE "old_prefix" INTO "new_prefix" .
+smv CHANGE: "old_prefix" INTO "new_prefix" .
 
 # Remove prefix (replace with empty string)
-smv CHANGE "IMG_" INTO "" .
+smv CHANGE: "IMG_" INTO "" .
 
 # Use with filters
-smv CHANGE "test" INTO "spec" . EXT:js
+smv CHANGE: "test" INTO "spec" . EXT:js
 ```
 
 ## File Operations
@@ -174,7 +182,7 @@ smv snake ./src EXT:rs -rp
 ### Batch File Renaming
 ```bash
 # Remove camera prefixes
-smv CHANGE "IMG_" INTO "" ~/Photos -p
+smv CHANGE: "IMG_" INTO "" ~/Photos -p
 
 # Standardize naming convention
 smv snake . EXT:jpg EXT:png -p
