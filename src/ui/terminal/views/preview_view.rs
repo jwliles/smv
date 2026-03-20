@@ -1,5 +1,11 @@
 use std::path::PathBuf;
 
+use ratatui::layout::Rect;
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, List, ListItem};
+use ratatui::Frame;
+
 use crate::transformers::{self, TransformType};
 use crate::ui::terminal::app::FileOperation;
 
@@ -65,6 +71,83 @@ impl PreviewView {
                 has_conflict,
             });
         }
+    }
+
+    /// Render the preview panel into `area`
+    pub fn render(&self, frame: &mut Frame, area: Rect) {
+        let items: Vec<ListItem> = if self.operations.is_empty() {
+            vec![
+                ListItem::new(Line::from(Span::styled(
+                    "No operations queued",
+                    Style::default().fg(Color::DarkGray),
+                ))),
+            ]
+        } else {
+            self.operations
+                .iter()
+                .map(|op| {
+                    if op.has_conflict {
+                        ListItem::new(Line::from(vec![
+                            Span::styled("⚠ ", Style::default().fg(Color::Red)),
+                            Span::styled(
+                                op.source_name.clone(),
+                                Style::default()
+                                    .fg(Color::Red)
+                                    .add_modifier(Modifier::CROSSED_OUT),
+                            ),
+                            Span::styled(" → ", Style::default().fg(Color::Red)),
+                            Span::styled(
+                                op.destination_name.clone(),
+                                Style::default().fg(Color::Red),
+                            ),
+                            Span::styled(
+                                " [CONFLICT]",
+                                Style::default()
+                                    .fg(Color::Red)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                        ]))
+                    } else if op.source_name == op.destination_name {
+                        ListItem::new(Line::from(Span::styled(
+                            format!("  {}", op.source_name),
+                            Style::default().fg(Color::DarkGray),
+                        )))
+                    } else {
+                        ListItem::new(Line::from(vec![
+                            Span::styled("  ", Style::default()),
+                            Span::styled(
+                                op.source_name.clone(),
+                                Style::default().fg(Color::Yellow),
+                            ),
+                            Span::styled(" → ", Style::default().fg(Color::DarkGray)),
+                            Span::styled(
+                                op.destination_name.clone(),
+                                Style::default().fg(Color::Green),
+                            ),
+                        ]))
+                    }
+                })
+                .collect()
+        };
+
+        let title = if self.operations.is_empty() {
+            " Preview ".to_string()
+        } else {
+            let conflicts = self.operations.iter().filter(|o| o.has_conflict).count();
+            if conflicts > 0 {
+                format!(" Preview ({} conflicts) ", conflicts)
+            } else {
+                format!(" Preview ({} ops) ", self.operations.len())
+            }
+        };
+
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title(title)
+            .style(Style::default().fg(Color::White));
+
+        let list = List::new(items).block(block);
+        frame.render_widget(list, area);
     }
 
     /// Generate preview for a file transformation

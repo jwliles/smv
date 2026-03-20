@@ -145,6 +145,57 @@ impl FileExplorer {
         Ok(())
     }
 
+    /// Get the current directory path
+    pub fn current_dir(&self) -> &PathBuf {
+        &self.current_dir
+    }
+
+    /// Start a search filter
+    pub fn start_search(&mut self, pattern: &str) {
+        self.search_pattern = Some(pattern.to_string());
+        self.filter_files(pattern);
+    }
+
+    /// Clear the active search filter
+    pub fn clear_search(&mut self) {
+        self.search_pattern = None;
+        self.filtered_files.clear();
+        if !self.files.is_empty() {
+            self.state.select(Some(0));
+        }
+    }
+
+    /// Returns true when a search filter is active
+    pub fn is_search_active(&self) -> bool {
+        !self.filtered_files.is_empty()
+    }
+
+    /// Returns the active search pattern, if any
+    pub fn search_pattern(&self) -> Option<&str> {
+        self.search_pattern.as_deref()
+    }
+
+    /// Returns the files to display (respects active filter)
+    pub fn display_files(&self) -> Vec<&FileItem> {
+        if self.filtered_files.is_empty() {
+            self.files.iter().collect()
+        } else {
+            self.filtered_files
+                .iter()
+                .filter_map(|&i| self.files.get(i))
+                .collect()
+        }
+    }
+
+    /// Returns the number of files currently displayed (respects filter)
+    pub fn display_count(&self) -> usize {
+        if self.filtered_files.is_empty() {
+            self.files.len()
+        } else {
+            self.filtered_files.len()
+        }
+    }
+
     /// Get the selected file
     pub fn selected(&self) -> Option<&FileItem> {
         let index = self.state.selected()?;

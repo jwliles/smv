@@ -1,11 +1,3 @@
----
-date_created: 2025-10-02T11-25-26
-date_updated: 2025-08-30T02-49-20
-timestamp: 1759404326182
-title: intent-based-cli-design
-id: a5591ad6-d944-4263-a998-49201d83c2a0
-hash: 86e8d262ec2262769f4ff6cd6b87fffc078ba9606e268987e810193b71301459
----
 # Command Design Philosophy: Intent-Based Flags
 
 ## Core Principles

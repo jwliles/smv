@@ -39,7 +39,7 @@ pub enum UiAction {
 }
 
 /// Transform action for UI operations
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum TransformAction {
     Snake,
     Kebab,
@@ -49,6 +49,21 @@ pub enum TransformAction {
     Pascal,
     Lower,
     Upper,
+    Sentence,
+    Start,
+    Studly,
+    SplitSnake,
+    SplitKebab,
+    SplitTitle,
+    SplitCamel,
+    SplitPascal,
+    SplitLower,
+    SplitUpper,
+    SplitSentence,
+    SplitStart,
+    SplitStudly,
+    Replace(String, String),
+    ReplaceRegex(String, String),
 }
 
 impl TransformAction {
@@ -62,6 +77,21 @@ impl TransformAction {
             TransformAction::Pascal => "PascalCase",
             TransformAction::Lower => "lowercase",
             TransformAction::Upper => "UPPERCASE",
+            TransformAction::Sentence => "Sentence case",
+            TransformAction::Start => "Start Case",
+            TransformAction::Studly => "StUdLyCaPs",
+            TransformAction::SplitSnake => "split→snake_case",
+            TransformAction::SplitKebab => "split→kebab-case",
+            TransformAction::SplitTitle => "split→Title Case",
+            TransformAction::SplitCamel => "split→camelCase",
+            TransformAction::SplitPascal => "split→PascalCase",
+            TransformAction::SplitLower => "split→lowercase",
+            TransformAction::SplitUpper => "split→UPPERCASE",
+            TransformAction::SplitSentence => "split→Sentence case",
+            TransformAction::SplitStart => "split→Start Case",
+            TransformAction::SplitStudly => "split→StUdLyCaPs",
+            TransformAction::Replace(_, _) => "replace",
+            TransformAction::ReplaceRegex(_, _) => "regex replace",
         }
     }
 }
