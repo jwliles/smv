@@ -1,11 +1,3 @@
----
-date_created: 2025-10-02T11-25-26
-date_updated: 2025-08-30T02-49-20
-timestamp: 1759404326140
-title: MANUAL
-id: 3e4e2adf-563f-42f9-9c00-45dff057a47f
-hash: fb9869e60a5b48806782a89eb686f0f5c612bbe55c2447e5b9ead97c7c05b909
----
 # SMV Manual
 
 ## NAME
